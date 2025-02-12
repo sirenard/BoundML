@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "boundml"
+version = "0.1.0"
+authors = [
+    { name="Simon Renard", email="simon.renard@ulb.be" },
+]
+description = "BoundML is a toolbox that helps with the development and evaluation of machine learning approach for the branch and bound algorithm."
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ecole @ git+https://github.com/sirenard/ecole.git",
+    "pyscipopt==5.1.1",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "torch_geometric",
+    "matplotlib",
+]
+
+[project.urls]
+Homepage = "https://github.com/sirenard/BoundML"
