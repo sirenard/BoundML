@@ -143,6 +143,58 @@ class GnnObserver(Observer):
     def __str__(self):
         return f"GNN({self.policy_path})"
 
+class AccuracyObserver(Observer):
+    """
+    Given 2 observers, this observer extracts the placement of the second observer choice in the scoring of the first one
+    It stores all its observations
+    """
+    def __init__(self, oracle: Observer, model_observer: Observer):
+        super().__init__()
+        self.oracle: Observer = oracle
+        self.model_observer: Observer = model_observer
+        self.observations = []
+
+    def before_reset(self, model):
+        self.oracle.before_reset(model)
+        self.model_observer.before_reset(model)
+
+    def extract(self, model, done):
+        m: pyscipopt.Model = model.as_pyscipopt()
+        candidates, *_ = m.getLPBranchCands()
+        prob_indexes = [var.getCol().getLPPos() for var in candidates]
+
+        oracle_scores = self.oracle.extract(model, done)
+
+        if self.oracle.is_principal_observer():
+            self.set_principal_observer(True)
+            return oracle_scores
+
+        oracle_scores = oracle_scores[prob_indexes]
+
+        model_scores = self.model_observer.extract(model, done)
+        model_scores = model_scores[prob_indexes]
+
+        best_index = np.argmax(model_scores)
+        oracle_sorted_indexes = np.argsort(-oracle_scores)
+
+        position = np.where(oracle_sorted_indexes == best_index)[0][0] + 1
+        self.observations.append(position)
+        return position
+
+    def get_observations(self):
+        return np.array(self.observations)
+
+    def done(self, model):
+        self.oracle.done(model)
+        self.model_observer.done(model)
+
+    def reset(self, instance_path, seed=None):
+        super().reset(instance_path, seed)
+        self.oracle.reset(instance_path, seed)
+        self.model_observer.reset(instance_path, seed)
+
+    def __str__(self):
+        return f"Acc {str(self.model_observer)}"
 
 class ConditionalObservers(Observer):
     def __init__(self, observers, conditions):
