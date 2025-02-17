@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "ecole @ git+https://github.com/sirenard/ecole.git",
-    "pyscipopt",
+    "pyscipopt==5.2.1", # to work with scip 9.2.0
     "torch",
     "torchvision",
     "torchaudio",
