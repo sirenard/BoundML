@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "ecole @ git+https://github.com/sirenard/ecole.git",
-    "pyscipopt==5.1.1",
+    "pyscipopt",
     "torch",
     "torchvision",
     "torchaudio",
