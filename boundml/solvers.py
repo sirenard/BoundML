@@ -130,8 +130,8 @@ class EcoleSolver(Solver):
 
     def get_action(self, action_set, observation) -> int:
         scores = observation[self.observer_index]
-        #action_index = scores[action_set].argmax()
-        action_index = np.random.choice(np.flatnonzero(scores[action_set] == scores[action_set].max())) # chose at random an index with max value
+        action_index = scores[action_set].argmax()
+        # action_index = np.random.choice(np.flatnonzero(scores[action_set] == scores[action_set].max())) # chose at random an index with max value
         action = action_set[action_index]
         return action
 
