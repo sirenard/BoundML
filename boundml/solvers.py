@@ -148,8 +148,8 @@ class ClassicSolver(Solver):
         self.model.setParams(scip_params)
 
     def configure(self):
-        utils.configure(self.model, branching_policy=self.branching_policy)
         super().configure()
+        utils.configure(self.model, branching_policy=self.branching_policy)
 
     def solve(self, path: str):
         self.model.readProblem(path)
