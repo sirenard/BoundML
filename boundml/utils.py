@@ -1,4 +1,5 @@
 import ecole
+import numpy as np
 import pyscipopt
 
 from boundml.output_control import OutputControl
@@ -34,3 +35,7 @@ def write_to_file(model_path, solution_path, model: pyscipopt.Model):
     model.writeBestTransSol(solution_path, write_zeros=True)
     output_control.unmute()
 
+def shifted_geometric_mean(values, shift=1.0):
+    values = np.array(values)
+    geom_mean = np.exp(np.mean(np.log(values + shift))) - shift
+    return geom_mean

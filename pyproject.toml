@@ -25,6 +25,7 @@ dependencies = [
     "torchaudio",
     "torch_geometric",
     "matplotlib",
+    "latextable",
 ]
 
 [project.urls]
