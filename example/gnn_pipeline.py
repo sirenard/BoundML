@@ -9,7 +9,7 @@ import sys
 import ecole
 
 from boundml.dataset_generator import DatasetGenerator
-from boundml.evaluation_tools import evaluate_solvers
+from boundml.evaluation_tools import evaluate_solvers, SolverEvaluationResults
 from boundml.observers import StrongBranching, PseudoCost, GnnObserver
 from boundml.model import train
 from boundml.solvers import ClassicSolver, EcoleSolver
@@ -51,7 +51,18 @@ solvers = [
 
 metrics = ["nnodes", "time", "gap"] # metrics of interest
 
-data = evaluate_solvers(solvers, instances, n_instances, metrics)
+evaluation_results = evaluate_solvers(solvers, instances, n_instances, metrics)
 
-data.performance_profile(metric="time")
-data.performance_profile(metric="nnodes")
+report = evaluation_results.report(
+        SolverEvaluationResults.sg_metric("nnodes", 10),
+        SolverEvaluationResults.sg_metric("time", 1),
+        SolverEvaluationResults.nwins("nnodes"),
+        SolverEvaluationResults.nsolved(),
+        SolverEvaluationResults.auc_score("time"))
+
+print(report)
+
+
+
+evaluation_results.performance_profile(metric="time")
+evaluation_results.performance_profile(metric="nnodes")

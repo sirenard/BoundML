@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "boundml"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     { name="Simon Renard", email="simon.renard@ulb.be" },
 ]
@@ -18,7 +18,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "ecole @ git+https://github.com/sirenard/ecole.git",
+    "ecole-fork",
     "pyscipopt==5.0.1", # to work with scip 9.1.0
     "torch",
     "torchvision",
