@@ -9,7 +9,8 @@ import sys
 import ecole
 
 from boundml.dataset_generator import DatasetGenerator
-from boundml.evaluation_tools import evaluate_solvers, SolverEvaluationResults
+from boundml.evaluation_tools import evaluate_solvers
+from boundml.solver_evaluation_results import SolverEvaluationResults
 from boundml.observers import StrongBranching, PseudoCost, GnnObserver
 from boundml.model import train
 from boundml.solvers import ClassicSolver, EcoleSolver

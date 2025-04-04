@@ -66,6 +66,11 @@ class EcoleSolver(Solver):
         self.before_start_callbacks = before_start_callbacks
         self.before_action_callbacks = before_action_callbacks
 
+        self.state = (
+            [score_observer, scip_params, additional_observers, before_start_callbacks, before_action_callbacks, *args],
+            kwargs
+        )
+
     def set_before_action_callbacks(self, c):
         self.before_action_callbacks = c
 
@@ -138,6 +143,12 @@ class EcoleSolver(Solver):
     def __str__(self):
         return str(self.observers[0])
 
+    def __getstate__(self):
+        return self.state
+
+    def __setstate__(self, state):
+        self.__init__(*state[0], **state[1])
+
 
 class ClassicSolver(Solver):
     def __init__(self, branching_policy, scip_params={}, *args, **kwargs):
@@ -146,6 +157,11 @@ class ClassicSolver(Solver):
         self.branching_policy = branching_policy
         self.configure()
         self.model.setParams(scip_params)
+
+        self.state = (
+            [branching_policy, scip_params, *args],
+            kwargs
+        )
 
     def configure(self):
         super().configure()
@@ -157,3 +173,9 @@ class ClassicSolver(Solver):
 
     def __str__(self):
         return self.branching_policy
+
+    def __getstate__(self):
+        return self.state
+
+    def __setstate__(self, state):
+        self.__init__(*state[0], **state[1])
