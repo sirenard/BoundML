@@ -15,7 +15,11 @@ def _solve(solver, prob_file_name, metrics):
     return [solver[metric] for metric in metrics]
 
 
-def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics):
+def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0):
+    if n_cpu == 0:
+        n_cpu = multiprocessing.cpu_count()
+
+
     output_control = OutputControl()
 
     data = np.zeros((n_instances, len(solvers), len(metrics)))
@@ -24,7 +28,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics):
     async_results = {}
 
     # Start the jobs
-    with multiprocessing.Pool() as pool:
+    with multiprocessing.Pool(processes=n_cpu) as pool:
         for i, instance in zip(range(n_instances), instances):
             for j, solver in enumerate(solvers):
                 prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
@@ -47,6 +51,9 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics):
                 print("".join([f"{d:{'<15.3f' if type(d) == float else '<15'}}" for d in line]), end="", flush=True)
 
             print()
+
+    for f in files:
+        f.close()
 
     res = SolverEvaluationResults(data, [str(s) for s in solvers], metrics)
 
