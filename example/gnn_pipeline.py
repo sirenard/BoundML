@@ -4,13 +4,9 @@ Example of pipeline of the BoundML library
 It replicates the experiment of "Exact Combinatorial Optimization  with Graph Convolutional Neural Networks"
 (http://arxiv.org/abs/1906.01629)
 """
-import sys
-
 import ecole
 
-from boundml.dataset_generator import DatasetGenerator
-from boundml.evaluation_tools import evaluate_solvers
-from boundml.solver_evaluation_results import SolverEvaluationResults
+from boundml import DatasetGenerator, evaluate_solvers, SolverEvaluationResults
 from boundml.observers import StrongBranching, PseudoCost, GnnObserver
 from boundml.model import train
 from boundml.solvers import ClassicSolver, EcoleSolver
