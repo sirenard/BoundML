@@ -171,8 +171,8 @@ class SolverEvaluationReport:
     def __str__(self):
         return tabulate(self.df, headers="keys", tablefmt='grid', showindex=False)
 
-    def to_latex(self):
-        return self.df.to_latex(index=False)
+    def to_latex(self, *args, **kwargs):
+        return self.df.to_latex(index=False, *args, **kwargs)
 
     def __add__(self, other):
         print(self.df.to_dict(orient='list'))
