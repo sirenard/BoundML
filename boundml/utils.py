@@ -2,9 +2,6 @@ import ecole
 import numpy as np
 import pyscipopt
 
-from boundml.output_control import OutputControl
-
-
 def get_ecole_model_from_file(path):
     model = pyscipopt.Model()
     model.readProblem(path)
@@ -26,14 +23,6 @@ def solve(model: pyscipopt.Model):
     nnodes = model.getNNodes()
     obj = model.getObjVal()
     return nnodes, obj
-
-
-def write_to_file(model_path, solution_path, model: pyscipopt.Model):
-    output_control = OutputControl()
-    output_control.mute()
-    model.writeProblem(model_path, trans=True)
-    model.writeBestTransSol(solution_path, write_zeros=True)
-    output_control.unmute()
 
 def shifted_geometric_mean(values, shift=1.0):
     values = np.array(values)

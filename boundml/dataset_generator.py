@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import ecole.observation
 
-from boundml.output_control import OutputControl
 from boundml.observers import ConditionalObservers
 from boundml.solvers import EcoleSolver
 
@@ -66,18 +65,14 @@ class DatasetGenerator:
 
         prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
 
-        output_control = OutputControl()
-
         count=0
         while ( max_samples<0 or self.sample_counter < max_samples) and (max_instances<0 or count<max_instances):
             instance = next(self.instances)
             self.episode_counter += 1
             count += 1
-            output_control.mute()
             m = instance.as_pyscipopt()
             m.setParam("display/verblevel", 0)
-            m.writeProblem(prob_file.name)
-            output_control.unmute()
+            m.writeProblem(prob_file.name, verbose=False)
             self.solver.solve(prob_file.name)
 
             print(f"Episode {self.episode_counter}, {self.sample_counter} samples collected so far")

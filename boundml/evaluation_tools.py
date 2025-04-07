@@ -4,7 +4,6 @@ import multiprocessing
 
 import numpy as np
 
-from boundml.output_control import OutputControl
 from boundml.solver_evaluation_results import SolverEvaluationResults
 from boundml.solvers import Solver
 
@@ -19,8 +18,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
     if n_cpu == 0:
         n_cpu = multiprocessing.cpu_count()
 
-
-    output_control = OutputControl()
+    n_cpu = max(n_cpu, n_instances + 1)
 
     data = np.zeros((n_instances, len(solvers), len(metrics)))
 
@@ -32,9 +30,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
         for i, instance in zip(range(n_instances), instances):
             for j, solver in enumerate(solvers):
                 prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
-                output_control.mute()
-                instance.as_pyscipopt().writeProblem(prob_file.name)
-                output_control.unmute()
+                instance.as_pyscipopt().writeProblem(prob_file.name, verbose=False)
 
                 files.append(prob_file)
 
@@ -89,23 +85,9 @@ if __name__ == "__main__":
         SolverEvaluationResults.nwins("nnodes"),
         SolverEvaluationResults.nsolved(),
         SolverEvaluationResults.auc_score("time"),
-        header = "easy"
     )
 
-    r2 = data.compute_report(
-        SolverEvaluationResults.sg_metric("nnodes", 10),
-        SolverEvaluationResults.sg_metric("time", 1),
-        SolverEvaluationResults.nwins("nnodes"),
-        SolverEvaluationResults.nsolved(),
-        SolverEvaluationResults.auc_score("time"),
-        header="medium"
-    )
+    print(r)
 
-    r3 = r + r2
-
-
-
-    print(r3)
-
-    # data.performance_profile(metric="time")
-    # data.performance_profile(metric="nnodes")
+    data.performance_profile(metric="time")
+    data.performance_profile(metric="nnodes")
