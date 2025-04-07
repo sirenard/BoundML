@@ -147,7 +147,7 @@ class SolverEvaluationResults:
 
 class SolverEvaluationReport:
     def __init__(self, data=None, header=None, df_=None):
-        assert data is not None != df_ is None, "Only one of data and df_ must be given"
+        assert (data is None) != (df_ is None), "Only one of data and df_ must be given"
 
         if df_ is not None:
             self.df = df_
@@ -160,11 +160,13 @@ class SolverEvaluationReport:
                     data_[(header, key)] = data[key]
                 else:
                     data_[("", key)] = data[key]
+
         else:
             data_ = data
 
         self.df = pd.DataFrame(data_)
-        self.df.set_index(("","solver"), inplace=True)
+        if header is not None:
+            self.df.set_index(("","solver"), inplace=True)
 
     def __str__(self):
         return tabulate(self.df, headers="keys", tablefmt='grid', showindex=False)
