@@ -1,7 +1,9 @@
 import latextable
 import matplotlib
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
+from tabulate import tabulate
 from texttable import Texttable
 
 from boundml.utils import shifted_geometric_mean
@@ -105,24 +107,13 @@ class SolverEvaluationResults:
 
         return np.array(res)
 
-    def report(self, *aggregations: tuple[str, callable], latex_output=False):
-        table = Texttable()
+    def compute_report(self, *aggregations: tuple[str, callable], **kwargs):
+        data = {"solver": [s for s in self.solvers]}
 
-        table.add_row(["Solver"] + [aggregation[0] for aggregation in aggregations])
-
-        data = np.zeros((len(aggregations), len(self.solvers)))
         for i, aggregation in enumerate(aggregations):
-            data[i, :] = aggregation[1](self)
+            data[aggregation[0]] = list(aggregation[1](self))
 
-        for i, solver_name in enumerate(self.solvers):
-            row = [solver_name]
-            row.extend(data[:, i])
-            table.add_row(row)
-
-        if latex_output:
-            return latextable.draw_latex(table, caption="Experimental results", label="table")
-        else:
-            return table.draw()
+        return SolverEvaluationReport(data, **kwargs)
 
     @staticmethod
     def sg_metric(metric, s):
@@ -153,3 +144,41 @@ class SolverEvaluationResults:
     @staticmethod
     def auc_score(metric):
         return ("AUC", lambda evaluationResults: evaluationResults.performance_profile(metric, plot=False))
+
+class SolverEvaluationReport:
+    def __init__(self, data=None, header=None, df_=None):
+        assert data is not None != df_ is None, "Only one of data and df_ must be given"
+
+        if df_ is not None:
+            self.df = df_
+            return
+
+        if header is not None:
+            data_ = {}
+            for key in data:
+                if key != "solver":
+                    data_[(header, key)] = data[key]
+                else:
+                    data_[("", key)] = data[key]
+        else:
+            data_ = data
+
+        self.df = pd.DataFrame(data_)
+        self.df.set_index(("","solver"), inplace=True)
+
+    def __str__(self):
+        return tabulate(self.df, headers="keys", tablefmt='grid', showindex=False)
+
+    def to_latex(self):
+        return self.df.to_latex(index=False)
+
+    def __add__(self, other):
+        print(self.df.to_dict(orient='list'))
+        print(other.df.to_dict(orient='list'))
+        df2 = pd.concat(
+            [self.df, other.df],
+            axis=1
+        )
+
+        df2 = df2.reset_index().rename(columns={'index': ('', 'solver')})
+        return SolverEvaluationReport(df_ = df2)

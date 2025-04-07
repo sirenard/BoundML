@@ -83,14 +83,29 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
 if __name__ == "__main__":
     data: SolverEvaluationResults = pickle.load(open("../data", "rb"))
 
-    r = data.report(
+    r = data.compute_report(
         SolverEvaluationResults.sg_metric("nnodes", 10),
         SolverEvaluationResults.sg_metric("time", 1),
         SolverEvaluationResults.nwins("nnodes"),
         SolverEvaluationResults.nsolved(),
-        SolverEvaluationResults.auc_score("time"))
+        SolverEvaluationResults.auc_score("time"),
+        header = "easy"
+    )
 
-    print(r)
+    r2 = data.compute_report(
+        SolverEvaluationResults.sg_metric("nnodes", 10),
+        SolverEvaluationResults.sg_metric("time", 1),
+        SolverEvaluationResults.nwins("nnodes"),
+        SolverEvaluationResults.nsolved(),
+        SolverEvaluationResults.auc_score("time"),
+        header="medium"
+    )
 
-    data.performance_profile(metric="time")
-    data.performance_profile(metric="nnodes")
+    r3 = r + r2
+
+
+
+    print(r3)
+
+    # data.performance_profile(metric="time")
+    # data.performance_profile(metric="nnodes")

@@ -54,7 +54,7 @@ metrics = ["nnodes", "time", "gap"] # metrics of interest
 
 evaluation_results = evaluate_solvers(solvers, instances, n_instances, metrics)
 
-report = evaluation_results.report(
+report = evaluation_results.compute_report(
         SolverEvaluationResults.sg_metric("nnodes", 10),
         SolverEvaluationResults.sg_metric("time", 1),
         SolverEvaluationResults.nwins("nnodes"),
