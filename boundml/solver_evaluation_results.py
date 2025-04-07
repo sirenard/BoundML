@@ -1,10 +1,8 @@
-import latextable
 import matplotlib
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from tabulate import tabulate
-from texttable import Texttable
 
 from boundml.utils import shifted_geometric_mean
 
