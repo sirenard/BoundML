@@ -3,8 +3,8 @@ from boundml.solver_evaluation_results import SolverEvaluationResults, SolverEva
 from boundml.solvers import *
 from boundml.observers import Observer, GnnObserver, RandomObserver, ConditionalObservers, AccuracyObserver, \
     StrongBranching, PseudoCost
-from dataset_generator import DatasetGenerator
-from model import train
+from boundml.dataset_generator import DatasetGenerator
+from boundml.model import train
 
 __all__ = ['evaluate_solvers', 'SolverEvaluationResults', 'SolverEvaluationReport', 'ClassicSolver', 'EcoleSolver',
            'DatasetGenerator', 'observers', 'model']
