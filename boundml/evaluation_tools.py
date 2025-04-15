@@ -18,7 +18,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
     if n_cpu == 0:
         n_cpu = multiprocessing.cpu_count()
 
-    n_cpu = max(n_cpu, n_instances + 1)
+    n_cpu = min(n_cpu, n_instances + 1)
 
     data = np.zeros((n_instances, len(solvers), len(metrics)))
 
