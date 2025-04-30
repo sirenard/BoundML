@@ -22,6 +22,9 @@ class Solver:
         if self.config_function is not None:
             self.config_function(self.model)
 
+    def set_params(self, params):
+        raise NotImplementedError
+
     def __getitem__(self, item):
         match item:
             case "time":
@@ -140,6 +143,9 @@ class EcoleSolver(Solver):
         action = action_set[action_index]
         return action
 
+    def set_params(self, params):
+        self.env.scip_params = params
+
     def __str__(self):
         return str(self.observers[0])
 
@@ -170,6 +176,9 @@ class ClassicSolver(Solver):
     def solve(self, path: str):
         self.model.readProblem(path)
         self.model.optimize()
+
+    def set_params(self, params):
+        self.model.setParams(params)
 
     def __str__(self):
         return self.branching_policy
