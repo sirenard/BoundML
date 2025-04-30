@@ -22,7 +22,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
 
     data = np.zeros((n_instances, len(solvers), len(metrics)))
 
-    files = []
+    files = {}
     async_results = {}
 
     # Start the jobs
@@ -32,8 +32,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
                 prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
                 instance.as_pyscipopt().writeProblem(prob_file.name, verbose=False)
 
-                files.append(prob_file)
-
+                files[i,j] = prob_file
                 async_results[i,j] = pool.apply_async(_solve, [solver, prob_file.name, metrics])
 
         print(f"{'Instance':<15}" + "".join([f"{str(solver):<{15 * len(metrics)}}" for solver in solvers]))
@@ -42,14 +41,12 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
             print(f"{i:<15}", end="")
             for j, solver in enumerate(solvers):
                 line = async_results[i,j].get()
+                files[i,j].close()
                 for k, d in enumerate(line):
                     data[i, j, k] = d
                 print("".join([f"{d:{'<15.3f' if type(d) == float else '<15'}}" for d in line]), end="", flush=True)
 
             print()
-
-    for f in files:
-        f.close()
 
     res = SolverEvaluationResults(data, [str(s) for s in solvers], metrics)
 
@@ -72,7 +69,6 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
             info.append(means[metric][j])
     print(f"{'sg mean': <15}" + "".join([f"{val: <15.3f}" for val in info]))
 
-    prob_file.close()
     return res
 
 

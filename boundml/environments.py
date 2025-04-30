@@ -21,10 +21,6 @@ class SimpleBranchingDynamics(ecole.dynamics.BranchingDynamics):
             self.pyscipopt_model.setSeparating(PY_SCIP_PARAMSETTING.OFF)
             self.pyscipopt_model.setHeuristics(PY_SCIP_PARAMSETTING.OFF)
 
-        # h = CountingHandler(self.pyscipopt_model)
-        # self.pyscipopt_model.includeEventhdlr(h, "Counter", "python event handler to count solutions")
-        # self.handler = h
-
         # Let the parent class get the model to the root node and return
         # the done flag / action_set
         return super().reset_dynamics(model)
@@ -32,7 +28,6 @@ class SimpleBranchingDynamics(ecole.dynamics.BranchingDynamics):
 
 class HistoryBranchingEnvironment(ecole.environment.Environment):
     __Dynamics__ = SimpleBranchingDynamics
-    #__DefaultObservationFunction__ = ecole.observation.NodeBipartite
 
 
 
