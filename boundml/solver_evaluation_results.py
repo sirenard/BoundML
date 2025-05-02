@@ -113,6 +113,13 @@ class SolverEvaluationResults:
 
         return SolverEvaluationReport(data, **kwargs)
 
+    def __add__(self, other):
+        assert self.metrics == other.metrics, "Metrics must be the same when combining Results of different solvers"
+        assert self.data.shape
+        solvers = self.solvers + other.solvers
+        data = np.hstack((self.data, other.data))
+        return SolverEvaluationResults(data, solvers, self.metrics)
+
     @staticmethod
     def sg_metric(metric, s):
         return (metric, lambda evaluationResults:
