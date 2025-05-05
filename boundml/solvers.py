@@ -145,6 +145,7 @@ class EcoleSolver(Solver):
 
     def set_params(self, params):
         self.env.scip_params = params
+        self.state[0][1] = params
 
     def __str__(self):
         return str(self.observers[0])
