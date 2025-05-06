@@ -50,7 +50,7 @@ class SolverEvaluationResults:
         self.data = np.delete(self.data, index, axis=1)
         self.solvers.remove(solver)
 
-    def performance_profile(self, metric: str = "nnodes", ratios=np.arange(0, 1.00, .01), filename=None, plot=True):
+    def performance_profile(self, metric: str = "nnodes", ratios=np.arange(0, 1.00, .01), filename=None, plot=True, logx=True):
 
         if filename:
             backend = matplotlib.get_backend()
@@ -58,8 +58,6 @@ class SolverEvaluationResults:
 
         metric_index = self.metrics.index(metric)
         n_instances = self.data.shape[0]
-
-        frequency = np.zeros((len(self.solvers), len(ratios)))
 
         data = self.data[:, :, metric_index]
         min = np.min(data)
@@ -84,7 +82,13 @@ class SolverEvaluationResults:
             elif "GNN" in label and "ub" in label:
                 x = label.split("_")[4]
                 label = f"$LLB^{x}$"
-            res.append(np.sum(ys * (xs[1] - xs[0])) / max)
+
+            if logx:
+                auc = np.trapezoid(ys, np.log(xs)) / np.log(max)
+            else:
+                auc = np.trapezoid(ys, xs) / max
+
+            res.append(auc)
             if plot:
                 plt.plot(xs, ys, label=label)
 
@@ -93,8 +97,9 @@ class SolverEvaluationResults:
             plt.xlabel(metric)
             plt.ylabel("frequency")
             plt.title(f"Performance profile w.r.t. {metric}")
-            # plt.yscale("log")
-            plt.xscale("log")
+
+            if logx:
+                plt.xscale("log")
 
             if filename:
                 plt.savefig(filename)
@@ -147,8 +152,8 @@ class SolverEvaluationResults:
             values)))
 
     @staticmethod
-    def auc_score(metric):
-        return ("AUC", lambda evaluationResults: evaluationResults.performance_profile(metric, plot=False))
+    def auc_score(metric, **kwargs):
+        return ("AUC", lambda evaluationResults: evaluationResults.performance_profile(metric, plot=False, **kwargs))
 
 class SolverEvaluationReport:
     def __init__(self, data=None, header=None, df_=None):
