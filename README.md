@@ -1,35 +1,27 @@
 # BoundML
 
-BoundML is a wrapper around a [fork of ecole](https://github.com/sirenard/ecole). 
+BoundML is a wrapper around a [fork of ecole](https://github.com/sirenard/ecole).
 It allows to easily develop new machine learning based branching strategies based for the Branch and Bound.
 
 ## Installation
 
-`pip install boundml`
+First, it is recommended to install `pyscipopt` and the different dependencies with conda to have the same scip installation
+for `pyscipopt` and `ecole-fork` (on which is based `boundml`).
 
-### Troubleshooting
-
-### Libraries not found
-
-You need to have the following librarires installed
-- SCIP 9.1.0
-- fmt
-- range-v3
-- pybind11
-
-It is possible to install it in a conda environment:
 ```
-conda install scip==9.1.0 fmt pybind11
+conda install pyscipopt fmt pybind11
 
 export CMAKE_PREFIX_PATH="${CONDA_PREFIX}"      
 export CPLUS_INCLUDE_PATH="${CONDA_PREFIX}/include/"
 export LIBRARY_PATH=${CONDA_PREFIX}/lib
 export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib
-```
 
+pip install boundml
+```
 The exports commands allow the compiler to find SCIP.
 
 To install range-v3 for a ubuntu ditribution:
+
 ```
 sudo apt install librange-v3-dev librange-v3-doc
 ```

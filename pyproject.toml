@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "ecole-fork",
-    "pyscipopt==5.0.1", # to work with scip 9.1.0
+    "pyscipopt",
     "torch",
     "torchvision",
     "torchaudio",
