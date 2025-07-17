@@ -5,6 +5,7 @@ It replicates the experiment of "Exact Combinatorial Optimization  with Graph Co
 (http://arxiv.org/abs/1906.01629)
 """
 import ecole
+import torch
 
 from boundml import DatasetGenerator, evaluate_solvers, SolverEvaluationResults
 from boundml.observers import StrongBranching, PseudoCost, GnnObserver
@@ -20,9 +21,10 @@ generator = DatasetGenerator(instances, StrongBranching(), PseudoCost(), expert_
 
 
 
-generator.generate(folder_name="samples", max_instances=10)
+# generator.generate(folder_name="samples", max_instances=10)
 
-model = train(sample_folder="samples", learning_rate=0.05, n_epochs=5, output="agent.pkl")
+# model = train(sample_folder="samples", learning_rate=0.05, n_epochs=5, output="agent.pkl")
+model = torch.load("agent.pkl")
 
 
 # Evaluation of the model compared to other strategies

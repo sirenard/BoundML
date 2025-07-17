@@ -2,11 +2,9 @@ import os
 import time
 
 import ecole
-import numpy as np
 import pyscipopt
 
 import boundml.utils as utils
-from boundml.environments import HistoryBranchingEnvironment
 from boundml.observers import Observer
 
 
@@ -54,7 +52,7 @@ class EcoleSolver(Solver):
         super().__init__(*args, **kwargs)
         self.observer_index = 0
         self.observers = [score_observer, *additional_observers]
-        self.env: ecole.environment = HistoryBranchingEnvironment(
+        self.env: ecole.environment = ecole.environment.Branching(
             observation_function=(
                 score_observer,
                 *additional_observers
