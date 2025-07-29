@@ -28,12 +28,13 @@ jobs:
         with:
           python-version: "3.13"
           activate-environment: myenv
+          auto-activate-base: false
 
       - run: conda install pip pyscipopt fmt pybind11 --channel conda-forge
       - run: | 
             conda info
-            p=$(conda info | grep  'env location' | sed 's: ::g')
-            CONDA_PREFIX=${p##*:}
+            #p=$(conda info | grep  'env location' | sed 's: ::g')
+            #CONDA_PREFIX=${p##*:}
             echo "Path: ${CONDA_PREFIX}"
             export CMAKE_PREFIX_PATH="${CONDA_PREFIX}"
             export CPLUS_INCLUDE_PATH="${CONDA_PREFIX}/include/"
