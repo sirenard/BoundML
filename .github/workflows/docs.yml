@@ -27,7 +27,6 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: "3.13"
-          activate-environment: boundml
           auto-update-conda: true
           
       - name: Conda info
