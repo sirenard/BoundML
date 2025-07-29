@@ -1,3 +1,7 @@
+"""
+boundml is a library that allow to develop and compare different MIP solvers configuration.
+"""
+
 from boundml.evaluation_tools import evaluate_solvers
 from boundml.solver_evaluation_results import SolverEvaluationResults, SolverEvaluationReport
 from boundml.solvers import *

@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Callable, Any
 
 import ecole
 import pyscipopt
@@ -10,11 +11,34 @@ from boundml.observers import Observer
 
 
 class Solver:
-    def __init__(self, config_function=None):
+    """
+    A Solver is a wrapper around a SCIP solver.
+    It can solve different a MIP and collect different metrics from this solving process.
+    """
+
+    def __init__(self, config_function: Callable[[pyscipopt.Model], None] = None):
+        """
+        Parameters
+        ----------
+        config_function : Callable[[pyscipopt.Model], None]
+            Callback function that is called before starting each solving process.
+            Can be useful to finely configure the solver.
+        """
         self.model: pyscipopt.Model = None
         self.config_function = config_function
 
-    def solve(self, path: str):
+    def solve(self, path: str) -> (int, float):
+        """
+        Solve the
+        Parameters
+        ----------
+        path : str
+            Path to the file to solve.
+
+        Returns
+        -------
+        Tuple[int, float] that is the number of nodes and the time used to solve the instance
+        """
         raise NotImplementedError
 
     def configure(self):
@@ -24,7 +48,24 @@ class Solver:
     def set_params(self, params):
         raise NotImplementedError
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> float:
+        """
+        Get an attribute from the solver after a solve.
+
+        Parameters
+        ----------
+        item : str
+            Name of the attribute to get. Either:
+                time: time in seconds used by the solver
+                nnodes: number of nodes used by the solver
+                obj: Final objective value
+                sol: Best solution found
+                estimate_nnodes: Estimated number of nodes used by the solver to go to optimality
+
+        Returns
+        -------
+        Value of the attribute.
+        """
         match item:
             case "time":
                 return self.model.getSolvingTime()
@@ -47,9 +88,39 @@ class Solver:
 
 
 class EcoleSolver(Solver):
+    """
+    EcoleSolver is a Solver. The branching decisions are taken by asking an Observer the scores of the candidates
+    variables. It branches on the one with the biggest score.
+    """
 
-    def __init__(self, score_observer: Observer | None = None, scip_params={}, additional_observers=[], before_start_callbacks=[],
-                 before_action_callbacks=[], *args, **kwargs):
+    def __init__(self, score_observer: Observer = None, scip_params: dict = {}, additional_observers: [Observer] = [],
+                 before_start_callbacks: [Callable[[str], None]] = [],
+                 before_action_callbacks: [Callable[[int, [int], Any], None]] = None, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        score_observer : Observer
+            Observer that scores the candidates variables.
+            If no score_observer is provided, a default Observer is used. It forces the solver to not take any decisions
+            and delegate the branching to SCIP. This can be useful to only make observations during the default behavior
+            of SCIP using additional_observers.
+        scip_params : dict
+            Dictionary of parameters to pass to the SCIP solver.
+        additional_observers : [Observer]
+            List of additional observers to perform any desired actions at each decision process.
+            Can be used to collect data for exemple.
+        before_start_callbacks : [Callable[[str], None]]
+            List of Callable that are called before the start of the solver with the name of the file to solve in
+            argument.
+        before_action_callbacks : [Callable[[int, [int], Any], None]]
+            List of Callable that are called before each branching decision. It takes as argument, the action that will
+            be performed, the list of possible action and the list of observations of each observer (score observer and
+            additional_observers).
+        args :
+            Additional arguments to pass to the parent Class Solver.
+        kwargs :
+            Additional arguments to pass to the parent Class Solver.
+        """
         super().__init__(*args, **kwargs)
         if score_observer is None:
             score_observer = Observer()
@@ -82,7 +153,20 @@ class EcoleSolver(Solver):
     def set_before_start_callbacks(self, c):
         self.before_start_callbacks = c
 
-    def solve(self, path: str):
+    def solve(self, path: str) -> (int, float):
+        """
+        Start the solving process.
+        At each step (branching decisions), perform the action based on the score_observer.
+
+        Parameters
+        ----------
+        path : str
+            Path to the file to solve.
+
+        Returns
+        -------
+        Tuple[int, float] that is the number of nodes and the time used to solve the instance
+        """
         pid = os.getpid()
         m = pyscipopt.Model()
         m.setParam("display/verblevel", 0)
@@ -150,7 +234,14 @@ class EcoleSolver(Solver):
         action = action_set[action_index]
         return action
 
-    def set_params(self, params):
+    def set_params(self, params: dict) -> None:
+        """
+        Set the parameters of the solver.
+        Parameters
+        ----------
+        params : dict
+            Parameters to set that respect SCIP parameters
+        """
         self.env.scip_params = params
         self.state[0][1] = params
 
@@ -165,7 +256,20 @@ class EcoleSolver(Solver):
 
 
 class ClassicSolver(Solver):
-    def __init__(self, branching_policy, scip_params={}, *args, **kwargs):
+    """
+    ClassicSolver is a Solver that is a wrapper arround a SCIP solver. It solves the instances using default SCIP.
+    """
+    def __init__(self, branching_policy: str, scip_params: dict={}, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        branching_policy : str
+            Name of the branching policy to use. It must be a valid SCIP policy.
+        scip_params : dict
+            Parameters to pass to the SCIP solver.
+        args :
+        kwargs :
+        """
         super().__init__(*args, **kwargs)
         self.model = pyscipopt.Model()
         self.branching_policy = branching_policy

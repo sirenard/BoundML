@@ -2,26 +2,84 @@ import ecole
 import numpy as np
 import pyscipopt
 import torch
+from pyscipopt import Model
+from typing import Any
 from boundml.model import load_policy, get_device
 
 
 class Observer:
-    def __init__(self, seed=None, principal_observer=False):
+    """
+    An Observer is an object that is called before each branching decisions to make an observation of the solver state.
+    """
+    def __init__(self, seed: int = None, principal_observer: bool = False):
+        """
+        Parameters
+        ----------
+        seed : int
+            Seed of the observer
+        principal_observer : bool
+            Whether the observer is the main observer, i.e., the one used that compute the scores of the candidates.
+        """
         self.seed = seed
         self.instance_path = None
         self.principal_observer = principal_observer
 
-    def before_reset(self, model):
+    def before_reset(self, model: Model):
+        """
+        Callback method called before the reset of the environment.
+        Can be used to extract information from the model before it is reset
+
+        Parameters
+        ----------
+        model : Model
+            State of the model
+        """
         return
 
-    def extract(self, model, done):
+    def extract(self, model: Model, done: bool) -> Any:
+        """
+        Callback method called before each branching decision.
+        Can be used to extract any information from the model.
+
+        Parameters
+        ----------
+        model :
+            State of the model
+        done : bool
+            Whether the solving process is done
+
+        Returns
+        -------
+        Anything the user want.
+        If the Observer is used as a scoring observer that scores each candidate, it must return a numpy array of size
+        model.getNVars() with float value for branching candidates variables that are their score, and np.nan values for
+        the other variables.
+        """
         return None
 
     def reset(self, instance_path, seed=None):
+        """
+        Callback method called after the reset of the environment.
+        Can be used to reset attribute.
+
+        Parameters
+        ----------
+        instance_path : str
+            Path to the instance that will be solved by the solver
+        seed : int
+        """
         self.instance_path = instance_path
         self.seed = seed
 
-    def done(self, model):
+    def done(self, model: Model):
+        """
+        Callback method once the solving process is done.
+
+        Parameters
+        ----------
+        model : Model
+            State of the model
+        """
         return
 
     def set_principal_observer(self, val):
@@ -35,6 +93,9 @@ class Observer:
 
 
 class RandomObserver(Observer):
+    """
+    Observer that assign random scores to the candidates
+    """
     def __init__(self, seed=None):
         super().__init__(seed)
         self.rng = np.random.default_rng()
@@ -62,6 +123,10 @@ class RandomObserver(Observer):
         return "random"
 
 class StrongBranching(Observer):
+    """
+    Observer that assign strong branching scores to the candidates.
+    Wrapper around ecole.observation.StrongBranchingScores
+    """
     def __init__(self):
         super().__init__()
         self.observer = ecole.observation.StrongBranchingScores()
@@ -83,6 +148,10 @@ class StrongBranching(Observer):
 
 
 class PseudoCost(Observer):
+    """
+    Observer that assign pseudocosts scores to the candidates.
+    Wrapper around ecole.observation.Pseudocosts
+    """
     def __init__(self):
         super().__init__()
         self.observer = ecole.observation.Pseudocosts()
@@ -104,6 +173,9 @@ class PseudoCost(Observer):
 
 
 class GnnObserver(Observer):
+    """
+    Observer that uses a Graph Neural Network to compute the scores.
+    """
     def __init__(self, policy_path: str, feature_observer=ecole.observation.NodeBipartite(), try_use_gpu=False,
                  **kwargs):
         super().__init__()
@@ -197,6 +269,9 @@ class AccuracyObserver(Observer):
         return f"Acc {str(self.model_observer)}"
 
 class ConditionalObservers(Observer):
+    """
+    Observer that gives the output of different observers depending on whether which condition is met
+    """
     def __init__(self, observers, conditions):
         super().__init__()
         self.observers = observers
