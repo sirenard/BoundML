@@ -31,6 +31,7 @@ jobs:
 
       - run: conda install pip pyscipopt fmt --channel conda-forge
       - run: |
+          echo ${CONDA_PREFIX}
           export CMAKE_PREFIX_PATH="${CONDA_PREFIX}" 
           export CPLUS_INCLUDE_PATH="${CONDA_PREFIX}/include/"
           export LIBRARY_PATH=${CONDA_PREFIX}/lib
