@@ -17,6 +17,9 @@ jobs:
   # Build the documentation and upload the static HTML files as an artifact.
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,12 +29,11 @@ jobs:
           python-version: '3.13'
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: "3.13"
-          auto-update-conda: true
+          activate-environment: boundml
+          python-version: 3.13
+          auto-activate-base: false
           
-      - name: Conda info
-        shell: bash
-        run: | 
+      - run: | 
             conda env list
             conda info
             conda install pip pyscipopt fmt pybind11 --channel conda-forge
