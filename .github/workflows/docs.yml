@@ -24,15 +24,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: "3.13"
           activate-environment: boundml
-          auto-activate-base: false
           
-      - run: |
+      - run: | 
             conda env list
-            conda activate boundml
             conda info
             conda install pip pyscipopt fmt pybind11 --channel conda-forge
             #p=$(conda info | grep  'env location' | sed 's: ::g')
