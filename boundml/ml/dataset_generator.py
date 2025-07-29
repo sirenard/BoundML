@@ -5,8 +5,8 @@ from pathlib import Path
 import numpy as np
 import ecole.observation
 
-from boundml.observers import ConditionalObservers
-from boundml.solvers import EcoleSolver
+from boundml.observers.observers import ConditionalObservers
+from boundml.solvers.solvers import EcoleSolver
 
 
 class DatasetGenerator:

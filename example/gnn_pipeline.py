@@ -8,9 +8,10 @@ import ecole
 import torch
 
 from boundml import DatasetGenerator, evaluate_solvers, SolverEvaluationResults
-from boundml.observers import StrongBranching, PseudoCost, GnnObserver
+from boundml.observers import StrongBranching, PseudoCost
+from boundml.observers.gnn_observer import GnnObserver
 from boundml.model import train
-from boundml.solvers import ClassicSolver, EcoleSolver
+from boundml.solvers.solvers import ClassicSolver, EcoleSolver
 
 instances = ecole.instance.CombinatorialAuctionGenerator(100, 500)
 

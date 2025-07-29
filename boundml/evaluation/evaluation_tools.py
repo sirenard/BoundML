@@ -4,8 +4,8 @@ import multiprocessing
 
 import numpy as np
 
-from boundml.solver_evaluation_results import SolverEvaluationResults
-from boundml.solvers import Solver
+from boundml.evaluation.solver_evaluation_results import SolverEvaluationResults
+from boundml.solvers.solvers import Solver
 
 from boundml.utils import shifted_geometric_mean
 

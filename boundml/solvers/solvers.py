@@ -7,7 +7,7 @@ import pyscipopt
 from ecole.core import DefaultType, Default
 
 import boundml.utils as utils
-from boundml.observers import Observer
+from boundml.core.observer import Observer
 
 
 class Solver:
