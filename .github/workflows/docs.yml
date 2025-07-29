@@ -31,8 +31,14 @@ jobs:
 
       - run: conda install pip pyscipopt fmt --channel conda-forge
       - run: | 
-          p=$(conda info --envs | grep -Po 'mymenv\K.*' | sed 's: ::g')
-          pip install  -C cmake.args="-DCMAKE_MODULE_PATH=$p/lib/cmake/" -e ./
+            CONDA_PREFIX=$CONDA_PKGS_DIR
+            echo "Path: ${CONDA_PREFIX}"
+            ls ${CONDA_PREFIX}
+            export CMAKE_PREFIX_PATH="${CONDA_PREFIX}"
+            export CPLUS_INCLUDE_PATH="${CONDA_PREFIX}/include/"
+            export LIBRARY_PATH=${CONDA_PREFIX}/lib
+            export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib
+            pip install -e ./
       - run: pip install pdoc
       - run: pdoc boundml/__init__.py -o docs
 
