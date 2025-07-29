@@ -95,7 +95,7 @@ class EcoleSolver(Solver):
 
     def __init__(self, score_observer: Observer = None, scip_params: dict = {}, additional_observers: [Observer] = [],
                  before_start_callbacks: [Callable[[str], None]] = [],
-                 before_action_callbacks: [Callable[[int, [int], Any], None]] = None, *args, **kwargs):
+                 before_action_callbacks: [Callable[[int, [int], Any], None]] = [], *args, **kwargs):
         """
         Parameters
         ----------
