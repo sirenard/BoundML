@@ -15,7 +15,7 @@ class Observer:
         return
 
     def extract(self, model, done):
-        return
+        return None
 
     def reset(self, instance_path, seed=None):
         self.instance_path = instance_path

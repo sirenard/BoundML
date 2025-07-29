@@ -3,6 +3,7 @@ import time
 
 import ecole
 import pyscipopt
+from ecole.core import DefaultType, Default
 
 import boundml.utils as utils
 from boundml.observers import Observer
@@ -47,9 +48,12 @@ class Solver:
 
 class EcoleSolver(Solver):
 
-    def __init__(self, score_observer: Observer, scip_params={}, additional_observers=[], before_start_callbacks=[],
+    def __init__(self, score_observer: Observer | None = None, scip_params={}, additional_observers=[], before_start_callbacks=[],
                  before_action_callbacks=[], *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if score_observer is None:
+            score_observer = Observer()
+
         self.observer_index = 0
         self.observers = [score_observer, *additional_observers]
         self.env: ecole.environment = ecole.environment.Branching(
@@ -134,8 +138,13 @@ class EcoleSolver(Solver):
     def after_action(self):
         return False
 
-    def get_action(self, action_set, observation) -> int:
+    def get_action(self, action_set, observation) -> int | DefaultType:
         scores = observation[self.observer_index]
+
+        # If no scores is given, use the default action (let scip branch how it wants)
+        if scores is None:
+            return Default
+
         action_index = scores[action_set].argmax()
         # action_index = np.random.choice(np.flatnonzero(scores[action_set] == scores[action_set].max())) # chose at random an index with max value
         action = action_set[action_index]
