@@ -32,6 +32,7 @@ jobs:
 
       - run: conda install pip pyscipopt fmt pybind11 --channel conda-forge
       - run: | 
+            conda activate myenv
             conda info
             #p=$(conda info | grep  'env location' | sed 's: ::g')
             #CONDA_PREFIX=${p##*:}
@@ -41,8 +42,8 @@ jobs:
             export LIBRARY_PATH=${CONDA_PREFIX}/lib
             export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib
             pip install -e ./
-      - run: pip install pdoc
-      - run: pdoc boundml/__init__.py -o docs
+            pip install pdoc
+            pdoc boundml/__init__.py -o docs
 
       - uses: actions/upload-pages-artifact@v3
         with:
