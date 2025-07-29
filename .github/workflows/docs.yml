@@ -28,7 +28,7 @@ jobs:
       - run: conda init
       - run: |
             conda create -n boundml 
-            conda activate myenv
+            conda activate boundml
             conda info
             conda install pip pyscipopt fmt pybind11 --channel conda-forge
             #p=$(conda info | grep  'env location' | sed 's: ::g')
