@@ -9,21 +9,8 @@ First, it is recommended to install `pyscipopt` and the different dependencies w
 for `pyscipopt` and `ecole-fork` (on which is based `boundml`).
 
 ```
-conda install pyscipopt fmt pybind11
-
-export CMAKE_PREFIX_PATH="${CONDA_PREFIX}"      
-export CPLUS_INCLUDE_PATH="${CONDA_PREFIX}/include/"
-export LIBRARY_PATH=${CONDA_PREFIX}/lib
-export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib
-
+conda install pip pyscipopt fmt
 pip install boundml
-```
-The exports commands allow the compiler to find SCIP.
-
-To install range-v3 for a ubuntu ditribution:
-
-```
-sudo apt install librange-v3-dev librange-v3-doc
 ```
 
 ## Example
