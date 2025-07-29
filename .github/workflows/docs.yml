@@ -25,11 +25,9 @@ jobs:
         with:
           python-version: '3.13'
       - uses: conda-incubator/setup-miniconda@v2
- 
-      - run: | 
-            conda init
+      - run: conda init
+      - run: |
             conda create -n boundml 
-            conda init
             conda activate myenv
             conda info
             conda install pip pyscipopt fmt pybind11 --channel conda-forge
