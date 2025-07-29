@@ -29,6 +29,10 @@ jobs:
           python-version: "3.13"
           activate-environment: myenv
 
+      - run: |
+          conda config --add channels conda-forge
+          conda config --add channels defaults
+          conda config --set channel_priority strict
       - run: conda install pip pyscipopt fmt
       - run: pip install boundml pdoc
       - run: pdoc boundml/__init__.py -o docs
