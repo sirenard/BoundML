@@ -31,6 +31,8 @@ jobs:
           auto-activate-base: false
           
       - run: |
+            conda env list
+            conda activate boundml
             conda info
             conda install pip pyscipopt fmt pybind11 --channel conda-forge
             #p=$(conda info | grep  'env location' | sed 's: ::g')
