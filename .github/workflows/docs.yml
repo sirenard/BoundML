@@ -30,7 +30,9 @@ jobs:
           activate-environment: myenv
 
       - run: conda install pip pyscipopt fmt --channel conda-forge
-      - run: pip install  -C cmake.args="-DCMAKE_MODULE_PATH=$(conda info --envs | grep -Po 'mymenv\K.*' | sed 's: ::g')/lib/cmake/" -e ./
+      - run: | 
+          p=$(conda info --envs | grep -Po 'mymenv\K.*' | sed 's: ::g')
+          pip install  -C cmake.args="-DCMAKE_MODULE_PATH=$p/lib/cmake/" -e ./
       - run: pip install pdoc
       - run: pdoc boundml/__init__.py -o docs
 
