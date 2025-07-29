@@ -33,7 +33,8 @@ jobs:
           python-version: 3.13
           auto-activate-base: false
           
-      - run: | 
+      - run: |
+            sudo apt install librange-v3-dev librange-v3-doc
             conda env list
             conda info
             conda install pip pyscipopt fmt pybind11 --channel conda-forge
