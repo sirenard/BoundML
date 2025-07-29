@@ -29,7 +29,7 @@ jobs:
           python-version: "3.13"
           activate-environment: myenv
 
-      - run: conda -y install pip pyscipopt fmt
+      - run: conda install pip pyscipopt fmt
       - run: pip install boundml pdoc
       - run: pdoc boundml/__init__.py -o docs
 
