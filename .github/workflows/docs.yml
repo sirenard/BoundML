@@ -32,10 +32,10 @@ jobs:
       - run: conda install pip pyscipopt fmt --channel conda-forge
       - run: |
           CONDA_PREFIX=$(conda info --envs | grep -Po 'mymenv\K.*' | sed 's: ::g') &&
-          echo "SCIP_DIR=${CONDA_PREFIX}" >> $GITHUB_ENV
+          echo "SCIP_DIR=${CONDA_PREFIX}/lib/cmake/scip" >> $GITHUB_ENV
       
           # Add SCIP to CMake prefix path
-          echo "CMAKE_PREFIX_PATH=${CONDA_PREFIX}" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=${CONDA_PREFIX}/lib/cmake" >> $GITHUB_ENV
       - run: pip install -e ./
       - run: pip install pdoc
       - run: pdoc boundml/__init__.py -o docs
