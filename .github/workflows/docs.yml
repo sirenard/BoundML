@@ -28,8 +28,11 @@ jobs:
         with:
           python-version: "3.13"
           activate-environment: boundml
+          auto-update-conda: true
           
-      - run: | 
+      - name: Conda info
+        shell: bash
+        run: | 
             conda env list
             conda info
             conda install pip pyscipopt fmt pybind11 --channel conda-forge
