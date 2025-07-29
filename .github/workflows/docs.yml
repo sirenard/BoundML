@@ -30,7 +30,13 @@ jobs:
           activate-environment: myenv
 
       - run: conda install pip pyscipopt fmt --channel conda-forge
-      - run: pip install boundml pdoc
+      - run: |
+          export CMAKE_PREFIX_PATH="${CONDA_PREFIX}" 
+          export CPLUS_INCLUDE_PATH="${CONDA_PREFIX}/include/"
+          export LIBRARY_PATH=${CONDA_PREFIX}/lib
+          export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib
+      - run: pip install -e ./
+      - run: pip install pdoc
       - run: pdoc boundml/__init__.py -o docs
 
       - uses: actions/upload-pages-artifact@v3
