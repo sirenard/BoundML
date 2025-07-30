@@ -1,5 +1,5 @@
 """
-boundml is a library that allow to develop and compare different MIP solvers configuration.
+.. include:: ../README.md
 """
 
 __all__ = [
@@ -8,3 +8,5 @@ __all__ = [
     "observers",
     "ml",
 ]
+
+__docformat__ = "numpy"
