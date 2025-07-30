@@ -1,6 +1,6 @@
 from typing import Any
 
-from pyscipopt import Model
+import ecole.core.scip
 
 
 class Observer:
@@ -20,26 +20,26 @@ class Observer:
         self.instance_path = None
         self.principal_observer = principal_observer
 
-    def before_reset(self, model: Model):
+    def before_reset(self, model: ecole.scip.Model):
         """
         Callback method called before the reset of the environment.
         Can be used to extract information from the model before it is reset
 
         Parameters
         ----------
-        model : Model
+        model : ecole.scip.Model
             State of the model
         """
         return
 
-    def extract(self, model: Model, done: bool) -> Any:
+    def extract(self, model: ecole.scip.Model, done: bool) -> Any:
         """
         Callback method called before each branching decision.
         Can be used to extract any information from the model.
 
         Parameters
         ----------
-        model :
+        model : ecole.scip.Model
             State of the model
         done : bool
             Whether the solving process is done
@@ -67,13 +67,13 @@ class Observer:
         self.instance_path = instance_path
         self.seed = seed
 
-    def done(self, model: Model):
+    def done(self, model: ecole.scip.Model):
         """
         Callback method once the solving process is done.
 
         Parameters
         ----------
-        model : Model
+        model : ecole.scip.Model
             State of the model
         """
         return
