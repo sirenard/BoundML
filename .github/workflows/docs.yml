@@ -44,7 +44,7 @@ jobs:
             export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib
             pip install -e ./
             pip install pdoc
-            pdoc boundml/__init__.py -o docs
+            pdoc boundml/__init__.py -o docs  --docformat numpy -e boundml=https://github.com/sirenard/BoundML/boundml/
 
       - uses: actions/upload-pages-artifact@v3
         with:

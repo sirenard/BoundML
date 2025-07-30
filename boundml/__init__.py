@@ -8,5 +8,3 @@ __all__ = [
     "observers",
     "ml",
 ]
-
-__docformat__ = "numpy"
