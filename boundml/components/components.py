@@ -58,6 +58,12 @@ class ComponentList:
     def __init__(self, components: Iterable[Component]):
         self.components = components
 
+    def __getstate__(self):
+        return self.components
+
+    def __setstate__(self, state):
+        self.__init__(state)
+
     def __getattr__(self, name):
         """Forward method calls to all components."""
         def method(*args, **kwargs):

@@ -29,7 +29,7 @@ class ModularSolver(ScipSolver):
         """
         super().__init__(scip_params, configure)
 
-        self.components = list(components)
+        self.components = ComponentList(list(components))
         self.branching_components = []
 
         for component in components:
@@ -49,13 +49,11 @@ class ModularSolver(ScipSolver):
     def solve(self, instance: str):
         self.model.readProblem(instance)
 
-        for component in self.components:
-            component.reset(self.model)
+        self.components.reset(self.model)
 
         self.model.optimize()
 
-        for component in self.components:
-            component.done(self.model)
+        self.components.done(self.model)
 
     def __getstate__(self):
         return (self.components, self.scip_params, self.configure)
