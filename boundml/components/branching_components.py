@@ -4,7 +4,7 @@ import numpy as np
 import pyscipopt
 from pyscipopt import Model, SCIP_RESULT
 
-from boundml.components import Component
+from .components import Component
 
 
 class BranchingComponent(Component):
@@ -58,7 +58,7 @@ class ScoringBranchingStrategy(BranchingComponent):
     def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT:
         """
         When called, update the scores and branches on the variable with the highest score if allowed
-        Parameters
+        Parameters. If one variable has a score of np.nan, then the node is cutoff
         ----------
         model : Model
         passive : bool
@@ -69,10 +69,13 @@ class ScoringBranchingStrategy(BranchingComponent):
         """
         candidates, *_ = model.getLPBranchCands()
         self.scores = np.zeros(len(candidates))
+        self.scores[:] = -model.infinity()
         self.compute_scores(model)
 
         if passive:
             return SCIP_RESULT.DIDNOTRUN
+        elif np.nan in self.scores:
+            return SCIP_RESULT.CUTOFF
         else:
             index = np.argmax(self.scores)
             best_cand = candidates[index]
@@ -83,15 +86,6 @@ class ScoringBranchingStrategy(BranchingComponent):
 
 
 class Pseudocosts(ScoringBranchingStrategy):
-    def __init__(self):
-        super().__init__()
-
-        # Dict that stores variables' scores of the last decisions
-        self.last_scores = {}
-
-    def reset(self, model: Model) -> None:
-        self.last_scores = {}
-
     def compute_scores(self, model: Model) -> None:
         """
         Compute pseudocosts scores for each candidate.
@@ -111,3 +105,85 @@ class Pseudocosts(ScoringBranchingStrategy):
     def __str__(self):
         return "Pseudocosts"
 
+class StrongBranching(ScoringBranchingStrategy):
+    """
+    Simple implementation of Strong Branching.
+    """
+    def __init__(self, priocands: bool = False, all_scores: bool = True):
+        """
+        Parameters
+        ----------
+        priocands : bool
+            Whether the scoring is only done on priocands
+        all_scores : bool
+            Whether all the candidates are scored. If True, the scoring is done when it is possible to cut the node
+        """
+        self.priocands = priocands
+        self.all_scores = all_scores
+
+    def compute_scores(self, model: Model) -> None:
+        branch_cands, branch_cand_sols, branch_cand_fracs, ncands, npriocands, nimplcands = model.getLPBranchCands()
+
+        n = npriocands if self.priocands else ncands
+        # Initialise scores for each variable
+        down_bounds = [None for _ in range(npriocands)]
+        up_bounds = [None for _ in range(npriocands)]
+
+        # Initialise placeholder values
+        num_nodes = model.getNNodes()
+        lpobjval = model.getLPObjVal()
+
+        # Start strong branching and iterate over the branching candidates
+        model.startStrongbranch()
+        for i in range(n):
+
+            # Check the case that the variable has already been strong branched on at this node.
+            # This case occurs when events happen in the node that should be handled immediately.
+            # When processing the node again (because the event did not remove it), there's no need to duplicate work.
+            if model.getVarStrongbranchNode(branch_cands[i]) == num_nodes:
+                down, up, downvalid, upvalid, _, lastlpobjval = model.getVarStrongbranchLast(branch_cands[i])
+                if downvalid:
+                    down_bounds[i] = down
+                if upvalid:
+                    up_bounds[i] = up
+                downgain = max([down - lastlpobjval, 0])
+                upgain = max([up - lastlpobjval, 0])
+                self.scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
+                continue
+
+            # Strong branch!
+            down, up, downvalid, upvalid, downinf, upinf, downconflict, upconflict, lperror = model.getVarStrongbranch(
+                branch_cands[i], 200, idempotent=False)
+
+            # In the case of an LP error handle appropriately (for this example we just break the loop)
+            if lperror:
+                break
+
+            # In the case of both infeasible sub-problems cutoff the node
+            if downinf and upinf:
+                self.scores[i] = np.nan
+                continue
+
+            # Calculate the gains for each up and down node that strong branching explored
+            if not downinf and downvalid:
+                down_bounds[i] = down
+                downgain = max([down - lpobjval, 0])
+            else:
+                downgain = 0
+            if not upinf and upvalid:
+                up_bounds[i] = up
+                upgain = max([up - lpobjval, 0])
+            else:
+                upgain = 0
+
+            # Update the pseudo-costs
+            lpsol = branch_cands[i].getLPSol()
+            if not downinf and downvalid:
+                model.updateVarPseudocost(branch_cands[i], -model.frac(lpsol), downgain, 1)
+            if not upinf and upvalid:
+                model.updateVarPseudocost(branch_cands[i], 1 - model.frac(lpsol), upgain, 1)
+
+            self.scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
+
+    def __str__(self):
+        return "StrongBranching"

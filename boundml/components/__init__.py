@@ -1,4 +1,12 @@
+from .branching_components import BranchingComponent, ScoringBranchingStrategy, Pseudocosts, StrongBranching
 from .components import Component
-from .branching_components import BranchingComponent, ScoringBranchingStrategy, Pseudocosts
+from .conditional_component import ConditionalBranchingComponent
 
-__all__ = ["Component", "BranchingComponent", "ScoringBranchingStrategy", "Pseudocosts"]
+__all__ = [
+    "Component",
+    "BranchingComponent",
+    "ScoringBranchingStrategy",
+    "Pseudocosts",
+    "StrongBranching",
+    "ConditionalBranchingComponent"
+]

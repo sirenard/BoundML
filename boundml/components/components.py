@@ -74,3 +74,6 @@ class ComponentList:
     def __iter__(self):
         return iter(self.components)
 
+    def __str__(self):
+        return  ",".join([str(c) for c in self.components])
+
