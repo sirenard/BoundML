@@ -18,8 +18,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "ecole-fork",
     "pyscipopt",
+    "pathos",
+    "dill",
     "torch",
     "torchvision",
     "torchaudio",

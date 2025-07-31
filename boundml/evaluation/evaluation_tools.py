@@ -1,6 +1,6 @@
-import pickle
 import tempfile
-import multiprocessing
+import dill
+import pathos.multiprocessing as mp
 
 import numpy as np
 
@@ -16,7 +16,7 @@ def _solve(solver, prob_file_name, metrics):
 
 def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0):
     if n_cpu == 0:
-        n_cpu = multiprocessing.cpu_count()
+        n_cpu = mp.cpu_count()
 
     n_cpu = min(n_cpu, n_instances + 1)
 
@@ -26,7 +26,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
     async_results = {}
 
     # Start the jobs
-    with multiprocessing.Pool(processes=n_cpu) as pool:
+    with mp.Pool(processes=n_cpu) as pool:
         for i, instance in zip(range(n_instances), instances):
             for j, solver in enumerate(solvers):
                 prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
@@ -73,7 +73,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
 
 
 if __name__ == "__main__":
-    data: SolverEvaluationResults = pickle.load(open("../data", "rb"))
+    data: SolverEvaluationResults = dill.load(open("../data", "rb"))
 
     r = data.compute_report(
         SolverEvaluationResults.sg_metric("nnodes", 10),
