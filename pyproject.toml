@@ -30,5 +30,10 @@ dependencies = [
     "tabulate"
 ]
 
+[project.optional-dependencies]
+ecole = [
+    "ecole-fork"
+]
+
 [project.urls]
 Homepage = "https://github.com/sirenard/BoundML"
