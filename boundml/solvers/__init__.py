@@ -1,3 +1,4 @@
-from .solvers import Solver, EcoleSolver, ClassicSolver
+from .solvers import DefaultScipSolver, Solver, ScipSolver
+from .modular_solver import ModularSolver
 
-__all__ = ["Solver", "EcoleSolver", "ClassicSolver"]
+__all__ = ["DefaultScipSolver", "ModularSolver", "Solver", "ScipSolver"]
