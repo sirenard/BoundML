@@ -41,7 +41,7 @@ solvers = [
         GnnBranching(
             "agent.pkl",
             feature_component=EcoleComponent(ecole.observation.NodeBipartite()),
-            try_use_gpu = True
+            try_use_gpu = False
         ),
         scip_params=scip_params,
     )
@@ -54,7 +54,7 @@ evaluation_results = evaluate_solvers(solvers, instances, n_instances, metrics)
 report = evaluation_results.compute_report(
         SolverEvaluationResults.sg_metric("nnodes", 10),
         SolverEvaluationResults.sg_metric("time", 1),
-        SolverEvaluationResults.nwins("nnodes"),
+        SolverEvaluationResults.nwins("time"),
         SolverEvaluationResults.nsolved(),
         SolverEvaluationResults.auc_score("time"))
 

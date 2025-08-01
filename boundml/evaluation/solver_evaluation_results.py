@@ -4,7 +4,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tabulate import tabulate
 
-from boundml.utils import shifted_geometric_mean
+from boundml.core.utils import shifted_geometric_mean
 
 
 class SolverEvaluationResults:

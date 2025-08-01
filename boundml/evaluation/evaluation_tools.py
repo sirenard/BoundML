@@ -8,7 +8,7 @@ from boundml.evaluation.solver_evaluation_results import SolverEvaluationResults
 from boundml.instances import Instances
 from boundml.solvers import Solver
 
-from boundml.utils import shifted_geometric_mean
+from boundml.core.utils import shifted_geometric_mean
 
 def _solve(solver, prob_file_name, metrics):
     solver.solve(prob_file_name)
