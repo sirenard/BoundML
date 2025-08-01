@@ -11,6 +11,9 @@ class Component(ABC):
     Depending on its subtype, it is used at different moment of the solving process
     """
 
+    def __init__(self):
+        # Member to store whatever the Component want.
+        self.observation = None
 
     def reset(self, model: Model) -> None:
         """
