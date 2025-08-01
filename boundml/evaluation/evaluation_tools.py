@@ -5,6 +5,7 @@ import pathos.multiprocessing as mp
 import numpy as np
 
 from boundml.evaluation.solver_evaluation_results import SolverEvaluationResults
+from boundml.instances import Instances
 from boundml.solvers import Solver
 
 from boundml.utils import shifted_geometric_mean
@@ -14,7 +15,7 @@ def _solve(solver, prob_file_name, metrics):
     return [solver[metric] for metric in metrics]
 
 
-def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0):
+def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metrics, n_cpu=0):
     if n_cpu == 0:
         n_cpu = mp.cpu_count()
 
@@ -30,7 +31,7 @@ def evaluate_solvers(solvers: [Solver], instances, n_instances, metrics, n_cpu=0
         for i, instance in zip(range(n_instances), instances):
             for j, solver in enumerate(solvers):
                 prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
-                instance.as_pyscipopt().writeProblem(prob_file.name, verbose=False)
+                instance.writeProblem(prob_file.name, verbose=False)
 
                 files[i,j] = prob_file
                 async_results[i,j] = pool.apply_async(_solve, [solver, prob_file.name, metrics])

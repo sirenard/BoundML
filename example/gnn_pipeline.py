@@ -6,25 +6,25 @@ It replicates the experiment of "Exact Combinatorial Optimization  with Graph Co
 """
 import ecole
 
+import boundml.instances
+from boundml.components import StrongBranching, Pseudocosts, EcoleComponent
+from boundml.components.gnn_component import GnnBranching
 from boundml.evaluation import evaluate_solvers, SolverEvaluationResults
-from boundml.observers import StrongBranching, PseudoCost
-from boundml.observers.gnn_observer import GnnObserver
-from boundml.ml import train, DatasetGenerator
-from boundml.solvers.solvers import ClassicSolver, EcoleSolver
+from boundml.ml import train, BranchingDatasetGenerator, load_policy
+from boundml.solvers import DefaultScipSolver, ModularSolver
 
-instances = ecole.instance.CombinatorialAuctionGenerator(100, 500)
+instances = boundml.instances.CombinatorialAuctionGenerator(100, 500)
 
 # Generate a dataset by solving instances using Strong Branching
 instances.seed(0)
-generator = DatasetGenerator(instances, StrongBranching(), PseudoCost(), expert_probability=0.1,
-                             state_observer=ecole.observation.NodeBipartite())
+state_component = EcoleComponent(ecole.observation.NodeBipartite())
+generator = BranchingDatasetGenerator(instances, StrongBranching(), state_component, Pseudocosts(), expert_probability=0.1)
 
+folder = "samples"
 
+generator.generate(folder_name=folder, max_instances=20)
 
-generator.generate(folder_name="samples", max_instances=10)
-
-model = train(sample_folder="samples", learning_rate=0.05, n_epochs=5, output="agent.pkl")
-
+model = train(sample_folder=folder, learning_rate=0.05, n_epochs=10, output="agent.pkl")
 
 # Evaluation of the model compared to other strategies
 instances.seed(12)
@@ -35,12 +35,12 @@ scip_params = {
 }
 
 solvers = [
-    ClassicSolver("relpscost", scip_params), # A solver that use a build in strategies
-    ClassicSolver("pscost", scip_params), # A solver that use a build in strategies
-    EcoleSolver(
-        score_observer=GnnObserver(
+    DefaultScipSolver("relpscost", scip_params), # A solver that use a build in strategies
+    DefaultScipSolver("pscost", scip_params), # A solver that use a build in strategies
+    ModularSolver(
+        GnnBranching(
             "agent.pkl",
-            feature_observer=ecole.observation.NodeBipartite(),
+            feature_component=EcoleComponent(ecole.observation.NodeBipartite()),
             try_use_gpu = True
         ),
         scip_params=scip_params,

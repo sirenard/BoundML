@@ -26,7 +26,7 @@ class BranchingDatasetGenerator:
 
         self.storer = DatasetStorer(expert_strategy, strategy, state_component_observer, sample_counter)
 
-        self.solver = ModularSolver(state_component_observer, strategy, self.storer, **kwargs)
+        self.solver = ModularSolver(self.storer, **kwargs)
 
         self.instances = instances
         self.episode_counter = episode_counter
@@ -82,23 +82,39 @@ class DatasetStorer(BranchingComponent):
         self.max_samples = max_samples
         self.sample_prefix = sample_prefix
 
+    def reset(self, model: Model) -> None:
+        self.conditional_strategy.reset(model)
+        self.state_component_observer.reset(model)
 
     def callback(self, model: Model, passive: bool = True):
+        res = self.conditional_strategy.callback(model, passive=passive)
         scores_are_expert = self.conditional_strategy.get_last_observer_index_used() == 0
         if scores_are_expert and (self.max_samples < 0 or self.sample_counter < self.max_samples):
             self.sample_counter += 1
 
             expert_scores = self.expert_strategy.scores
-            node_state = self.state_component_observer.observation
 
             candidates, *_ = model.getLPBranchCands()
             action_set = [var.getCol().getLPPos() for var in candidates]
             action = action_set[np.argmax(expert_scores)]
 
-            data = [node_state, action, action_set, expert_scores]
+            scores = np.zeros(model.getNVars())
+            scores[:] = np.nan
+            scores[action_set] = expert_scores
+
+            self.state_component_observer.callback(model, True)
+            node_state = self.state_component_observer.observation
+
+
+
+            data = [node_state, action, action_set, scores]
             filename = f"{self.folder_name}/sample{self.sample_prefix}_{self.sample_counter}.pkl"
 
             with gzip.open(filename, "wb") as f:
                 pickle.dump(data, f)
 
-        return None
+        return res
+
+    def done(self, model: Model) -> None:
+        self.conditional_strategy.done(model)
+        self.state_component_observer.done(model)

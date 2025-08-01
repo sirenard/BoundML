@@ -31,3 +31,9 @@ class EcoleComponent(BranchingComponent):
     def callback(self, model: Model, passive: bool=True):
         self.observation = self.observer.extract(self.ecole_model, done=False)
         return None
+
+    def __getstate__(self):
+        return type(self.observer)
+
+    def __setstate__(self, state):
+        self.__init__(state())

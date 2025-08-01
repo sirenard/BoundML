@@ -3,7 +3,6 @@ import torch
 from pyscipopt import Model
 
 from boundml.ml.model import load_policy, get_device
-from boundml.core.observer import Observer
 
 from .branching_components import ScoringBranchingStrategy, BranchingComponent
 
@@ -59,3 +58,6 @@ class GnnBranching(ScoringBranchingStrategy):
     def done(self, model: Model) -> None:
         super().done(model)
         self.feature_component.done(model)
+
+    def __str__(self):
+        return f"GNN({self.policy_path})"
