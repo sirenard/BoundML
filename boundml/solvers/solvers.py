@@ -1,3 +1,4 @@
+import tempfile
 from abc import ABC, abstractmethod
 from typing import Callable
 
@@ -36,10 +37,13 @@ class ScipSolver(Solver):
         """
         self.scip_params = scip_params or {}
         self.configure = configure
+        self.model = None
+
+    def build_model(self):
         self.model = Model()
         self.set_params(self.scip_params)
-        if configure is not None:
-            configure(self.model)
+        if self.configure is not None:
+            self.configure(self.model)
         self.model.setParam("display/verblevel", 0)
 
     def set_params(self, params):
@@ -84,6 +88,23 @@ class ScipSolver(Solver):
             case _:
                 raise KeyError
 
+    def solve_model(self, model: Model):
+        """
+        A scip solver can solve directly a pyscipopt model.
+        Parameters
+        ----------
+        model : Model
+            model to solve.
+        """
+        self.build_model() # Must build a new model each time due to some ecole dependencies
+        model.setParam("display/verblevel", 0)
+        prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
+        model.writeProblem(prob_file.name, verbose=False)
+
+        self.solve(prob_file.name)
+        prob_file.close()
+
+
     def __getstate__(self):
         return self.scip_params, self.configure
 
@@ -108,14 +129,19 @@ class DefaultScipSolver(ScipSolver):
             Arguments to build the parent class ScipSolver
         """
         super().__init__(*args, **kwargs)
-        self.model.setParam(f"branching/{branching_strategy}/priority", 9999999)
         self.branching_strategy = branching_strategy
         self.state = (
             [branching_strategy, *args],
             kwargs
         )
 
+    def build_model(self):
+        super().build_model()
+        self.model.setParam(f"branching/{self.branching_strategy}/priority", 9999999)
+
+
     def solve(self, instance: str):
+        self.build_model()
         self.model.readProblem(instance)
         self.model.optimize()
 

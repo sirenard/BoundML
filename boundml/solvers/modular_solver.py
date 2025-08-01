@@ -36,9 +36,13 @@ class ModularSolver(ScipSolver):
             if isinstance(component, BranchingComponent):
                 self.branching_components.append(component)
 
-        most_inf_branch_rule = BoundmlBranchrule(self.model, self.branching_components)
+
+
+    def build_model(self):
+        super().build_model()
+        branchrule = BoundmlBranchrule(self.model, self.branching_components)
         self.model.includeBranchrule(
-            most_inf_branch_rule,
+            branchrule,
             "boundml",
             "Custom branching rule for ModularSolver",
             priority=10000000,
