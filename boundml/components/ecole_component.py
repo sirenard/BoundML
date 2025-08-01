@@ -1,5 +1,6 @@
 from pyscipopt import Model
-from .components import Component
+
+from . import BranchingComponent
 
 try:
     import ecole  # The optional dependency
@@ -7,12 +8,14 @@ try:
 except ImportError:
     HAS_ECOLE_FORK = False
 
-class EcoleComponent(Component):
+class EcoleComponent(BranchingComponent):
     """
     EcoleComponent is a wrapper around a [ecole](https://github.com/sirenard/ecole) Observer.
     Its callback method returns what the extract method of the Observer would have returned
     """
     def __init__(self, observer):
+        super().__init__()
+
         if not HAS_ECOLE_FORK:
             raise RuntimeError(
                 "EcoleComponent requires 'ecole-fork' package. "
@@ -20,11 +23,10 @@ class EcoleComponent(Component):
             )
         self.observer = observer
         self.ecole_model = None
-        self.observation = None
 
     def reset(self, model: Model) -> None:
         self.ecole_model = ecole.scip.Model.from_pyscipopt(model)
-        self.observer.reset(self.ecole_model)
+        self.observer.before_reset(self.ecole_model)
 
     def callback(self, model: Model, passive: bool=True):
         self.observation = self.observer.extract(self.ecole_model, done=False)

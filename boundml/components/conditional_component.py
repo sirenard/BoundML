@@ -33,6 +33,7 @@ class ConditionalComponent(Component):
         components, conditions = zip(*elements)
         self.components = ComponentList(components)
         self.conditions = conditions
+        self.last_observer_index_used = -1
 
     @classmethod
     def build(cls, subtype: Type[Component]) -> Type[Component]:
@@ -72,14 +73,18 @@ class ConditionalComponent(Component):
         -------
         Either the result of the first callback with a true condition, either None if no condition is True
         """
-        for condition, component in zip(self.conditions, self.components):
+        for i, (condition, component) in enumerate(zip(self.conditions, self.components)):
             if condition(model):
+                self.last_observer_index_used = i
                 return component.callback(model, passive)
 
         return None
 
     def done(self, model: Model) -> None:
         self.components.done(model)
+
+    def get_last_observer_index_used(self):
+        return self.last_observer_index_used
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.components})"

@@ -187,3 +187,53 @@ class StrongBranching(ScoringBranchingStrategy):
 
     def __str__(self):
         return "StrongBranching"
+
+
+class AccuracyBranching(ScoringBranchingStrategy):
+    """
+    AccuracyBranchingComponent is a component that depends on 2 ScoringBranchingStrategy.
+    Generally an oracle, and another one that tries to imitate the oracle.
+    It outputs the same results as the oracle, but in addition stores for each branching decision at which position the
+    second component would have ranked the oracle's decision
+    """
+
+    def __init__(self, oracle: ScoringBranchingStrategy, model: ScoringBranchingStrategy):
+        super().__init__()
+        self.oracle_strategy = oracle
+        self.model_strategy = model
+        self.observation = []
+
+    def reset(self, model: Model) -> None:
+        super().reset(model)
+        self.oracle_strategy.reset(model)
+        self.model_strategy.reset(model)
+
+    def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT:
+        self.oracle_strategy.callback(model, True)
+        self.model_strategy.callback(model, False)
+
+        return super().callback(model, passive)
+
+    def compute_scores(self, model: Model) -> None:
+        oracle_scores = self.oracle_strategy.scores
+        model_scores = self.model_strategy.scores
+
+        self.scores = oracle_scores
+
+        best_index = np.argmax(model_scores)
+        oracle_sorted_indexes = np.argsort(-oracle_scores)
+
+        position = np.where(oracle_sorted_indexes == best_index)[0][0] + 1
+        self.observation.append(position)
+
+    def done(self, model: Model) -> None:
+        self.oracle_strategy.done(model)
+        self.model_strategy.done(model)
+
+        super().done(model)
+
+    def get_observations(self):
+        return np.array(self.observation)
+
+    def __str__(self):
+        return f"Acc {str(self.model_strategy)}"
