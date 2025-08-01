@@ -5,6 +5,7 @@
 __all__ = [
     "solvers",
     "evaluation",
-    "observers",
+    "instances",
+    "components",
     "ml",
 ]

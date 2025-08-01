@@ -51,6 +51,8 @@ class ModularSolver(ScipSolver):
         )
 
     def solve(self, instance: str):
+        self.build_model()
+
         self.model.readProblem(instance)
 
         self.components.reset(self.model)
