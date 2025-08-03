@@ -16,7 +16,8 @@ class BranchingComponent(Component):
     @abstractmethod
     def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT:
         """
-        Callback method called by the solver when a branching decision is required
+        Callback method called by the solver when a branching decision is required.
+        Is responsible to perform the branching as it wants if passive is False.
 
         Parameters
         ----------
@@ -27,6 +28,7 @@ class BranchingComponent(Component):
         Returns
         -------
         SCIP_RESULT among: SCIP_RESULT.BRANCHED, SCIP_RESULT.DIDNOTRUN, SCIP_RESULT.CUTOFF
+        Or None if the component does not aim to perform any action. For exemple, if it collects data.
         """
         raise NotImplementedError("Subclasses must implement this method.")
 

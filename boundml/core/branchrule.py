@@ -19,7 +19,7 @@ class BoundmlBranchrule(Branchrule):
         passive = False
         for component in self.components:
             r = component.callback(self.model, passive)
-            if r is not None:
+            if r is not None and r != SCIP_RESULT.DIDNOTRUN:
                 result = r
                 passive = True
 

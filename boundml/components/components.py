@@ -7,7 +7,7 @@ from pyscipopt import Model, SCIP_RESULT
 
 class Component(ABC):
     """
-    A Component is a component of a Solver that contains different callback used by the solver.
+    A Component is a component of a ModularSolver that contains different callback used by the solver.
     Depending on its subtype, it is used at different moment of the solving process
     """
 
@@ -41,7 +41,7 @@ class Component(ABC):
 
         Returns
         -------
-        SCIP_RESULT that corresponds to the action made by the callback
+        SCIP_RESULT that corresponds to the action made by the callback, if no action was made then return None
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
