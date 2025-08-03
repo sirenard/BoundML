@@ -1,41 +1,33 @@
-import ecole
-import numpy as np
 import pyscipopt
+from pyscipopt import Model
 
+from boundml.components import ScoringBranchingStrategy
 from boundml.evaluation import evaluate_solvers, SolverEvaluationResults
-from boundml.observers import Observer
-from boundml.solvers import EcoleSolver, ClassicSolver
+from boundml.solvers import DefaultScipSolver, ModularSolver
+from boundml.instances import CombinatorialAuctionGenerator
 
 
-class MyObserver(Observer):
-    def extract(self, model: ecole.scip.Model, done: bool):
+class MyBranchingStrategy(ScoringBranchingStrategy):
+    def compute_scores(self, model: Model):
         """
         This method is called before each branching decision.
         It computes a score for each branching candidate
         """
 
-        # Get the corresponding pyscipopt model
-        m: pyscipopt.Model = model.as_pyscipopt()
-
         # List of branching candidates
-        candidates, *_ = m.getLPBranchCands()
+        candidates, *_ = model.getLPBranchCands()
 
-        # Array of scores. Each index correspond to a variable probindex
-        # For all the variables that are not branching candidates, the score must be np.nan
-        scores = np.zeros(m.getNVars())
-        scores[:] = np.nan
 
         # Compute the score for each candidate
         var: pyscipopt.Variable
-        for var in candidates:
-            probindex = var.getCol().getLPPos() # probindex of the variable as defined in SCIP
-
+        for i, var in enumerate(candidates):
             obj_coef = var.getObj()
             val = var.getLPSol()
 
-            scores[probindex] = obj_coef * val
+            self.scores[i] = obj_coef * val
 
-        return scores
+    def __str__(self):
+        return "Custom"
 
 
 if __name__ == "__main__":
@@ -45,13 +37,13 @@ if __name__ == "__main__":
 
     # List of solvers to evaluate
     solvers= [
-        ClassicSolver("relpscost", scip_params),
-        ClassicSolver("pscost", scip_params),
-        EcoleSolver(MyObserver(), scip_params),
+        DefaultScipSolver("relpscost", scip_params=scip_params),
+        DefaultScipSolver("pscost", scip_params=scip_params),
+        ModularSolver(MyBranchingStrategy(), scip_params=scip_params),
     ]
 
     # Generator of instances on which to perform the evaluation
-    instances = ecole.instance.CombinatorialAuctionGenerator(100, 500)
+    instances = CombinatorialAuctionGenerator(100, 500)
 
     # Evaluate the solvers
     # data is a SolverEvaluationResults. It can be pickled to be saved and analyzed latter

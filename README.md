@@ -1,26 +1,29 @@
 # What is boundml ?
 
-BoundML is a wrapper around a [fork of ecole](https://github.com/sirenard/ecole).
+BoundML is a toolbox to evaluate and compare branch and bound solvers.
 It allows to easily develop new machine learning based (or not) branching strategies for the Branch and Bound.
 
 It comes with several submodules:
-
-- **solvers**: Contains all the class of type `Solver`. They are basically wrapper around SCIP. They can be used to
-  solve
-  instances using custom settings or branching strategies
-- **evaluation**: Contains all the tools evaluate and compare a list of `Solver` on a set of instances.
-- **observers**: Contains all the builtin `Observer` class. A `Solver` calls all its observers at different moment of
-  the solving process. An `Observer` can be used to define a branching strategy or simply to collects data.
+- **solvers**: Contains all the class of type `Solver`. A `Solver` represent a MILP solver. 
+- **evaluation**: Contains all the tools to evaluate and compare a list of `Solver` on a set of instances.
+- **components**: Contains all the definition of `Component` class that can be used to parametrize a `ModularSolver`. A `Component` can be simple observer called at a certain time in the solving process, or an active component of the solver depending on its subtype.
 - **ml**: Contains some ML tools to apply some wellknown techniques to learn branching strategies. In particular, it
   allows to collect a dataset and train a Graph Neural Network to imitate a branching strategy as in
   this [paper](http://arxiv.org/abs/1906.01629).
+- **instances**: Contains a set of MILP instances generator
 
 # Installation
 
-First, it is recommended to install `pyscipopt` with conda to have the same scip installation for both `pyscipopt` and
-`ecole-fork` (a dependency of boundml).
-for `pyscipopt` and `ecole-fork` (on which is based `boundml`). `pybind11` and `fmt` can also be installed with conda if
-not already installed on the system.
+There is 2 way to install `boundml`: `pip install boundml` and `pip install boundml[all]`. 
+The former does not require any specific  setup but does not contain the classes that depend on a fork of the library ecole: [ecole-fork](https::github.com/sirenard/ecole).
+The latter contains everything but requires some additional installation steps in order to have ecole-fork and pyscipopt to share the same SCIP installation.
+
+## Full Installation
+
+This section describes how to install the full version of `boundml`.
+
+First, it is recommended to install `pyscipopt` with conda to have the same SCIP installation for both `pyscipopt` and
+`ecole-fork`. In addition `pybind11` and `fmt` can also be installed with conda if not already installed on the system.
 
 ```bash
 conda create -n myenv
@@ -41,14 +44,14 @@ export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib
 Finally, you can install boundml.
 
 ```bash
-pip install boundml
+pip install boundml[all]
 ```
 
 # How to ...
 
 ## ... Create my own branching strategy ?
 
-In boundml, a branching strategy is simply a `Observer` that before each decision assigns a score to the candidates
+In boundml, a branching strategy is simply a `Component` (in particular a `BranchingComponent`) that before each decision assigns a score to the candidates
 variables. Then, the associated `Solver` will branch on the candidate with the highest score.
 
 For this example, we will implement a branching strategy where a candidate's score is its impact on the objective
@@ -57,42 +60,33 @@ function: its objective's coefficient multiplied by its current LP solution.
 The full example is available [here](example/branching_strategy.py).
 
 ```python
-import ecole
-import numpy as np
 import pyscipopt
+from pyscipopt import Model
 
-from boundml.observers import Observer
+from boundml.components import ScoringBranchingStrategy
 
 
-class MyObserver(Observer):
-    def extract(self, model: ecole.scip.Model, done: bool):
+class MyBranchingStrategy(ScoringBranchingStrategy):
+    def compute_scores(self, model: Model):
         """
         This method is called before each branching decision.
         It computes a score for each branching candidate
         """
 
-        # Get the corresponding pyscipopt model
-        m: pyscipopt.Model = model.as_pyscipopt()
-
         # List of branching candidates
-        candidates, *_ = m.getLPBranchCands()
+        candidates, *_ = model.getLPBranchCands()
 
-        # Array of scores. Each index correspond to a variable probindex
-        # For all the variables that are not branching candidates, the score must be np.nan
-        scores = np.zeros(m.getNVars())
-        scores[:] = np.nan
 
         # Compute the score for each candidate
         var: pyscipopt.Variable
-        for var in candidates:
-            probindex = var.getCol().getLPPos()  # probindex of the variable as defined in SCIP
-
+        for i, var in enumerate(candidates):
             obj_coef = var.getObj()
             val = var.getLPSol()
 
-            scores[probindex] = obj_coef * val
+            self.scores[i] = obj_coef * val
 
-        return scores
+    def __str__(self):
+        return "Custom"
 ```
 
 ## ... Test my branching strategy
@@ -107,43 +101,42 @@ by computing a report containing the metrics of interest (shifted geometric mean
 The full example is available [here](example/branching_strategy.py).
 
 ```python
-import ecole
-
 from boundml.evaluation import evaluate_solvers, SolverEvaluationResults
-from boundml.solvers import EcoleSolver, ClassicSolver
+from boundml.solvers import DefaultScipSolver, ModularSolver
+from boundml.instances import CombinatorialAuctionGenerator
 
 scip_params = {
     "limits/time": 30
 }
 
 # List of solvers to evaluate
-solvers = [
-    ClassicSolver("relpscost", scip_params),
-    ClassicSolver("pscost", scip_params),
-    EcoleSolver(MyObserver(), scip_params),
+solvers= [
+    DefaultScipSolver("relpscost", scip_params=scip_params),
+    DefaultScipSolver("pscost", scip_params=scip_params),
+    ModularSolver(MyBranchingStrategy(), scip_params=scip_params),
 ]
 
 # Generator of instances on which to perform the evaluation
-instances = ecole.instance.CombinatorialAuctionGenerator(100, 500)
+instances = CombinatorialAuctionGenerator(100, 500)
 
 # Evaluate the solvers
 # data is a SolverEvaluationResults. It can be pickled to be saved and analyzed latter
 data = evaluate_solvers(
     solvers,
     instances,
-    10,  # number of instances to solve
-    ["nnodes", "time", "gap"],  # list of metrics of interes among ["nnodes", "time", "gap"]
-    0,  # Number of cores to use in parallel. If 0, use all the available cores
+    10, # number of instances to solve
+    ["nnodes", "time", "gap"], # list of metrics of interes among ["nnodes", "time", "gap"]
+    0, # Number of cores to use in parallel. If 0, use all the available cores
 )
 
 # Compute a report from the raw data.
 # The report aggregates different metrics for each solver.
 report = data.compute_report(
-    SolverEvaluationResults.sg_metric("nnodes", 10),  # SG mean of the number of nodes
-    SolverEvaluationResults.sg_metric("time", 1),  # SG mean of the time spent
-    SolverEvaluationResults.nwins("nnodes"),  # Number of time a solver has been the fastest
-    SolverEvaluationResults.nsolved(),  # Number of time a solver solved an instance to optimality
-    SolverEvaluationResults.auc_score("time"),  # AUC score with respect to time
+    SolverEvaluationResults.sg_metric("nnodes", 10), # SG mean of the number of nodes
+    SolverEvaluationResults.sg_metric("time", 1), # SG mean of the time spent
+    SolverEvaluationResults.nwins("nnodes"), # Number of time a solver has been the fastest
+    SolverEvaluationResults.nsolved(), # Number of time a solver solved an instance to optimality
+    SolverEvaluationResults.auc_score("time"), # AUC score with respect to time
 )
 
 # Display the report
@@ -166,8 +159,17 @@ design your own workflow to train a model, and use this model in an `Observer` t
 
 `DatasetGenerator` can be useful to generate a dataset.
 
+# Limitations and future development
+
+Here is a list of features that are not yet part of `boundml` but will be one day:
+
+- Implement `Solver` classes for different solvers (gurobi, highs, cplex)
+- For the moment, only  `BranchingComponent` are really useful and called during the solving process. The idea is to also have specific `Component` for the different steps of the SCIP solver (node selection, heuristics, ...)  
+
+Feel free to contribute by creating pool requests with new features/fixes or by creating issues with your requirement that could improve `boundml`.
+
 # Troubleshooting and issue
 
 If you encounter any unwanted behaviors or issues with boundml, do not hesitate to create an
-issue [here](https://github.com/sirenard/BoundML/issues/new) 
+issue [here](https://github.com/sirenard/BoundML/issues/new). 
 
