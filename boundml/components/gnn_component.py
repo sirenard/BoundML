@@ -1,4 +1,5 @@
 import numpy as np
+import pyscipopt
 import torch
 from pyscipopt import Model
 
@@ -53,7 +54,14 @@ class GnnBranching(ScoringBranchingStrategy):
         )
 
         logits = self.policy(*observation)
-        return logits.cpu().detach().numpy()
+        scores = logits.cpu().detach().numpy()
+
+        candidates, *_ = model.getLPBranchCands()
+        var: pyscipopt.Variable
+        for i, var in enumerate(candidates):
+            prob_index = var.getCol().getLPPos()
+            self.scores[i] = scores[prob_index]
+
 
     def done(self, model: Model) -> None:
         super().done(model)
