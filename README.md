@@ -165,6 +165,7 @@ Here is a list of features that are not yet part of `boundml` but will be one da
 
 - Implement `Solver` classes for different solvers (gurobi, highs, cplex)
 - For the moment, only  `BranchingComponent` are really useful and called during the solving process. The idea is to also have specific `Component` for the different steps of the SCIP solver (node selection, heuristics, ...)  
+- Remove all dependencies to `ecole-fork`
 
 Feel free to contribute by creating pool requests with new features/fixes or by creating issues with your requirement that could improve `boundml`.
 
