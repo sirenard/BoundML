@@ -5,13 +5,21 @@ It replicates the experiment of "Exact Combinatorial Optimization  with Graph Co
 (http://arxiv.org/abs/1906.01629)
 """
 import ecole
+import torch
 
 import boundml.instances
 from boundml.components import StrongBranching, Pseudocosts, EcoleComponent
 from boundml.components.gnn_component import GnnBranching
 from boundml.evaluation import evaluate_solvers, SolverEvaluationResults
-from boundml.ml import train, BranchingDatasetGenerator, load_policy
-from boundml.solvers import DefaultScipSolver, ModularSolver
+from boundml.ml import train, BranchingDatasetGenerator
+from boundml.solvers import ModularSolver, DefaultScipSolver
+
+# Tell torch to use only one thread
+# It avoids issues when running the whole experiment in one process (because evaluate_solvers) uses multiprocessing and
+# torch had spawn threads from the train which causes issues.
+# If you want to use several threads for the train function, please use the train and evaluate_solvers function in 2
+# different processes
+torch.set_num_threads(1)
 
 instances = boundml.instances.CombinatorialAuctionGenerator(100, 500)
 
@@ -22,9 +30,9 @@ generator = BranchingDatasetGenerator(instances, StrongBranching(), state_compon
 
 folder = "samples"
 
-generator.generate(folder_name=folder, max_instances=20)
+generator.generate(folder_name=folder, max_instances=5)
 
-model = train(sample_folder=folder, learning_rate=0.05, n_epochs=10, output="agent.pkl")
+train(sample_folder=folder, learning_rate=0.05, n_epochs=10, output="agent.pkl")
 
 # Evaluation of the model compared to other strategies
 instances.seed(12)
@@ -40,7 +48,7 @@ solvers = [
     ModularSolver(
         GnnBranching(
             "agent.pkl",
-            feature_component=EcoleComponent(ecole.observation.NodeBipartite()),
+            feature_component=state_component,
             try_use_gpu = False
         ),
         scip_params=scip_params,
@@ -49,14 +57,16 @@ solvers = [
 
 metrics = ["nnodes", "time", "gap"] # metrics of interest
 
-evaluation_results = evaluate_solvers(solvers, instances, n_instances, metrics)
+
+evaluation_results = evaluate_solvers(solvers, instances, n_instances, metrics, 0)
 
 report = evaluation_results.compute_report(
         SolverEvaluationResults.sg_metric("nnodes", 10),
         SolverEvaluationResults.sg_metric("time", 1),
         SolverEvaluationResults.nwins("time"),
         SolverEvaluationResults.nsolved(),
-        SolverEvaluationResults.auc_score("time"))
+        SolverEvaluationResults.auc_score("time")
+)
 
 print(report)
 
