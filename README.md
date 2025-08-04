@@ -17,14 +17,6 @@ It comes with several submodules:
 
 # Installation
 
-There is 2 way to install `boundml`: `pip install boundml` and `pip install boundml[all]`.
-The former does not require any specific setup but does not contain the classes that depend on a fork of the library
-ecole: [ecole-fork](https::github.com/sirenard/ecole).
-The latter contains everything but requires some additional installation steps in order to have ecole-fork and pyscipopt
-to share the same SCIP installation.
-
-## Full Installation
-
 `pip install boundml`
 
 You also need to install fmt in order to be able to use `ecole-fork` which is a dependency.
