@@ -13,7 +13,9 @@ It comes with several submodules:
 - **ml**: Contains some ML tools to apply some wellknown techniques to learn branching strategies. In particular, it
   allows to collect a dataset and train a Graph Neural Network to imitate a branching strategy as in
   this [paper](http://arxiv.org/abs/1906.01629).
-- **instances**: Contains a set of MILP instances generator
+- **instances**: Contains a set of MILP instances iterator. In particular, it contains random generators to work easily
+  with a lot of instances from one type of problem, and an iterator that go through MipLib instances by downloading
+  automatically the instances.
 
 # Installation
 
