@@ -1,8 +1,12 @@
 from .ecole_instances import *
 from .instances import *
+from .miplib import *
+from .folder_instances import *
 
 __all__ = [
-    "Instances"
+    "Instances",
+    "FolderInstances",
+    "MipLibInstances",
 ] + [
     "CapacitatedFacilityLocationGenerator",
     "CombinatorialAuctionGenerator",

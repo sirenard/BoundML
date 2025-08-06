@@ -146,6 +146,33 @@ design your own workflow to train a model, and use this model in an `Observer` t
 
 `DatasetGenerator` can be useful to generate a dataset.
 
+## ... Solve MIPLIB instances
+
+It is very easy to evaluate your solvers on MIPLIB instances using the instances Iterator `MipLibInstances`. It
+downloads automatically the instances and cache them make the download only once.
+
+The following example solves the first 10 instances from [MIPLIB benchmark](https://miplib.zib.de/tag_benchmark.html)
+with 2 `DefaultScipSolvers` that uses different branching strategies.
+
+```python
+from boundml.evaluation import evaluate_solvers
+from boundml.instances import MipLibInstances
+from boundml.solvers import DefaultScipSolver
+
+scip_params = {"limits/time": 60}
+
+# Download automatically MIPLIB instances and cache them
+instances = MipLibInstances("benchmark")
+
+solvers = [
+    DefaultScipSolver("relpscost", scip_params),
+    DefaultScipSolver("pscost", scip_params),
+]
+
+# Solve the ten first instances
+evaluate_solvers(solvers, instances, 10, ["nnodes", "time", "gap"])
+```
+
 # Limitations and future development
 
 Here is a list of features that are not yet part of `boundml` but will be one day:

@@ -3,19 +3,17 @@ import os
 import shutil
 import zipfile
 from pathlib import Path
-import random
 from typing import Callable
 
 import requests
 from appdirs import user_cache_dir
-from pyscipopt import Model
 from tqdm import tqdm
 
-from boundml.instances import Instances
+from boundml.instances.folder_instances import FolderInstances
 from boundml.solvers import DefaultScipSolver
 
 
-class MipLibInstances(Instances):
+class MipLibInstances(FolderInstances):
     """
     MipLibInstances allow to iterate through MipLib instances.
     It downloads archive files once and cache it as long with all the extracted instances.
@@ -24,7 +22,7 @@ class MipLibInstances(Instances):
     By default, MipLibInstances iterates through the instances ordered by alphabetical order, a seed can be set to
     randomize the order.
     """
-    archives_urls = {
+    _archives_urls = {
         "collection": "https://miplib.zib.de/downloads/collection.zip",
         "benchmark": "https://miplib.zib.de/downloads/benchmark.zip"
     }
@@ -44,28 +42,26 @@ class MipLibInstances(Instances):
             Filter instances based on their name (name.mps) to work only with a desired subset of instances
         """
         # Create a cache directory specific to your library
-        self.cache_dir = Path(user_cache_dir("boundml"))
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.zip_file = self.cache_dir.joinpath(f"{subset}.zip")
-        self.instances_dir = self.cache_dir.joinpath(f"{subset}")
+        self._cache_dir = Path(user_cache_dir("boundml"))
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self._zip_file = self._cache_dir.joinpath(f"{subset}.zip")
+        self._instances_dir = self._cache_dir.joinpath(f"{subset}")
 
-        if subset in MipLibInstances.archives_urls:
-            url = MipLibInstances.archives_urls[subset]
+        if subset in MipLibInstances._archives_urls:
+            url = MipLibInstances._archives_urls[subset]
         else:
-            raise ValueError(f"Unknown subset: {subset}. Must be one of {MipLibInstances.archives_urls}")
+            raise ValueError(f"Unknown subset: {subset}. Must be one of {MipLibInstances._archives_urls}")
 
         self._download(url, force_download)
         self._extract(force_download or force_extract)
 
-        self.instances_files = [name for name in os.listdir(self.instances_dir) if filter(name)]
-        self.instances_files.sort()
-        self.index = 0
+        super().__init__(str(self._instances_dir), filter)
 
     def _download(self, url: str, force: bool = False):
-        if force or not self.zip_file.exists():
+        if force or not self._zip_file.exists():
             resp = requests.get(url, stream=True)
             total = int(resp.headers.get('content-length', 0))
-            with open(self.zip_file, 'wb') as file, tqdm(
+            with open(self._zip_file, 'wb') as file, tqdm(
                     desc=str("Downloading MIPLIB instances"),
                     total=total,
                     unit='iB',
@@ -77,16 +73,16 @@ class MipLibInstances(Instances):
                     bar.update(size)
 
     def _extract(self, force: bool = False):
-        if force or not self.instances_dir.exists():
-            if self.instances_dir.exists():
-                shutil.rmtree(self.instances_dir)
+        if force or not self._instances_dir.exists():
+            if self._instances_dir.exists():
+                shutil.rmtree(self._instances_dir)
 
             print("Extracting collections.zip...")
-            self.instances_dir.mkdir(exist_ok=True)
-            with zipfile.ZipFile(self.zip_file, 'r') as zip_ref:
-                zip_ref.extractall(self.instances_dir)
+            self._instances_dir.mkdir(exist_ok=True)
+            with zipfile.ZipFile(self._zip_file, 'r') as zip_ref:
+                zip_ref.extractall(self._instances_dir)
 
-            files = os.listdir(self.instances_dir)
+            files = os.listdir(self._instances_dir)
             with tqdm(
                     desc=str("Extracting instances"),
                     total=len(files),
@@ -95,7 +91,7 @@ class MipLibInstances(Instances):
                     unit_divisor=1,
             ) as bar:
                 for file in files:
-                    path = os.path.join(self.instances_dir, file)
+                    path = os.path.join(self._instances_dir, file)
                     dest_path = ".".join(path.split(".")[:-1])
                     with gzip.open(path, 'rb') as f_in:
                         with open(dest_path, 'wb') as f_out:
@@ -103,27 +99,6 @@ class MipLibInstances(Instances):
                     os.remove(path)
 
                     bar.update(1)
-
-    def __next__(self):
-        if self.index >= len(self.instances_files):
-            raise StopIteration()
-
-        path = os.path.join(self.instances_dir, self.instances_files[self.index])
-        model = Model()
-        model.setParam("display/verblevel", 0)
-        model.readProblem(path)
-        self.index += 1
-        return model
-
-    def seed(self, seed: int):
-        """
-        Shuffle the instances based on the given seed
-        Parameters
-        ----------
-        seed : int
-        """
-        random.Random(seed).shuffle(self.instances_files)
-        self.index = 0
 
 
 if __name__ == "__main__":
