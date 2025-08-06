@@ -41,20 +41,26 @@ class ScoringBranchingStrategy(BranchingComponent):
     def __init__(self):
         super().__init__()
 
-        self.scores = np.zeros(0)
-
     @abstractmethod
-    def compute_scores(self, model: Model) -> None:
+    def compute_scores(self, model: Model) -> np.array:
         """
-        Compute and update self.scores for each candidate.
-        self.scores[i] must contain the score for i th candidate
+        Compute scores for each branching candidate.
+        scores[i] must contain the score for i th candidate
+        If a score is np.nan, the underlying strategy consider that it can cutoff the node
 
         Parameters
         ----------
         model : Model
             State of the model
+
+        Returns
+        ----------
+        np.array with a size of the number of branching candidates
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        candidates, *_ = model.getLPBranchCands()
+        scores = np.zeros(len(candidates))
+        scores[:] = -model.infinity()
+        return scores
 
 
     def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT:
@@ -70,16 +76,14 @@ class ScoringBranchingStrategy(BranchingComponent):
         SCIP_RESULT.BRANCHED if passive==False, SCIP_RESULT.DIDNOTRUN otherwise
         """
         candidates, *_ = model.getLPBranchCands()
-        self.scores = np.zeros(len(candidates))
-        self.scores[:] = -model.infinity()
-        self.compute_scores(model)
+        scores = self.compute_scores(model)
 
         if passive:
             return SCIP_RESULT.DIDNOTRUN
-        elif np.nan in self.scores:
+        elif np.nan in scores:
             return SCIP_RESULT.CUTOFF
         else:
-            index = np.argmax(self.scores)
+            index = np.argmax(scores)
             best_cand = candidates[index]
             model.branchVar(best_cand)
 
@@ -95,6 +99,7 @@ class Pseudocosts(ScoringBranchingStrategy):
         ----------
         model : Model
         """
+        scores = super().compute_scores(model)
         candidates, *_ = model.getLPBranchCands()
 
         var: pyscipopt.Variable
@@ -102,7 +107,9 @@ class Pseudocosts(ScoringBranchingStrategy):
             lpsol = var.getLPSol()
             score = model.getVarPseudocostScore(var, lpsol)
 
-            self.scores[i] = score
+            scores[i] = score
+
+        return scores
 
     def __str__(self):
         return "Pseudocosts"
@@ -124,6 +131,8 @@ class StrongBranching(ScoringBranchingStrategy):
         self.all_scores = all_scores
 
     def compute_scores(self, model: Model) -> None:
+        scores = super().compute_scores(model)
+
         branch_cands, branch_cand_sols, branch_cand_fracs, ncands, npriocands, nimplcands = model.getLPBranchCands()
 
         n = npriocands if self.priocands else ncands
@@ -150,7 +159,7 @@ class StrongBranching(ScoringBranchingStrategy):
                     up_bounds[i] = up
                 downgain = max([down - lastlpobjval, 0])
                 upgain = max([up - lastlpobjval, 0])
-                self.scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
+                scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
                 continue
 
             # Strong branch!
@@ -163,7 +172,7 @@ class StrongBranching(ScoringBranchingStrategy):
 
             # In the case of both infeasible sub-problems cutoff the node
             if downinf and upinf:
-                self.scores[i] = np.nan
+                scores[i] = np.nan
                 continue
 
             # Calculate the gains for each up and down node that strong branching explored
@@ -185,7 +194,9 @@ class StrongBranching(ScoringBranchingStrategy):
             if not upinf and upvalid:
                 model.updateVarPseudocost(branch_cands[i], 1 - model.frac(lpsol), upgain, 1)
 
-            self.scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
+            scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
+
+        return scores
 
     def __str__(self):
         return "StrongBranching"
@@ -210,23 +221,21 @@ class AccuracyBranching(ScoringBranchingStrategy):
         self.oracle_strategy.reset(model)
         self.model_strategy.reset(model)
 
-    def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT:
-        self.oracle_strategy.callback(model, True)
-        self.model_strategy.callback(model, False)
-
-        return super().callback(model, passive)
-
     def compute_scores(self, model: Model) -> None:
-        oracle_scores = self.oracle_strategy.scores
-        model_scores = self.model_strategy.scores
+        scores = super().compute_scores(model)
 
-        self.scores = oracle_scores
+        oracle_scores = self.oracle_strategy.compute_scores(model)
+        model_scores = self.model_strategy.compute_scores(model)
+
+        scores = oracle_scores
 
         best_index = np.argmax(model_scores)
         oracle_sorted_indexes = np.argsort(-oracle_scores)
 
         position = np.where(oracle_sorted_indexes == best_index)[0][0] + 1
         self.observation.append(position)
+
+        return scores
 
     def done(self, model: Model) -> None:
         self.oracle_strategy.done(model)

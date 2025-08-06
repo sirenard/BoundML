@@ -12,8 +12,8 @@ class Component(ABC):
     """
 
     def __init__(self):
-        # Member to store whatever the Component want.
         self.observation = None
+        """Used by the component to store its output if desired."""
 
     def reset(self, model: Model) -> None:
         """

@@ -39,6 +39,8 @@ class GnnBranching(ScoringBranchingStrategy):
         self.feature_component.reset(model)
 
     def compute_scores(self, model: Model) -> None:
+        scores = super().compute_scores(model)
+
         self.feature_component.callback(model, True)
         observation = self.feature_component.observation
 
@@ -54,13 +56,15 @@ class GnnBranching(ScoringBranchingStrategy):
         )
 
         logits = self.policy(*observation)
-        scores = logits.cpu().detach().numpy()
+        predicted_scores = logits.cpu().detach().numpy()
 
         candidates, *_ = model.getLPBranchCands()
         var: pyscipopt.Variable
         for i, var in enumerate(candidates):
             prob_index = var.getCol().getLPPos()
-            self.scores[i] = scores[prob_index]
+            scores[i] = predicted_scores[prob_index]
+
+        return scores
 
 
     def done(self, model: Model) -> None:

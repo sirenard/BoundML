@@ -13,6 +13,8 @@ class MyBranchingStrategy(ScoringBranchingStrategy):
         This method is called before each branching decision.
         It computes a score for each branching candidate
         """
+        # Initialize scores with the good size, and a score of - infinity for each candidate
+        scores = super().compute_scores(model)
 
         # List of branching candidates
         candidates, *_ = model.getLPBranchCands()
@@ -24,7 +26,9 @@ class MyBranchingStrategy(ScoringBranchingStrategy):
             obj_coef = var.getObj()
             val = var.getLPSol()
 
-            self.scores[i] = obj_coef * val
+            scores[i] = obj_coef * val
+
+        return scores
 
     def __str__(self):
         return "Custom"
