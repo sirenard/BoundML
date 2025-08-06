@@ -5,14 +5,41 @@ from typing import Callable
 from pyscipopt import Model
 
 class Solver(ABC):
+    """
+    An abstract base class for solvers.
+    """
     @abstractmethod
     def solve(self, instance: str):
+        """
+        Solves a instancse that is a file
+        Parameters
+        ----------
+        instance : str
+            Path to the instance
+        """
         raise NotImplementedError("Subclasses must implement this method.")
+
+    def solve_model(self, model: Model):
+        """
+        Solve directly a pyscipopt model.
+        Can work even if the underlying solver is not SCIP, as it only write the corresponding problem to a file in
+        order to use the method solve
+        Parameters
+        ----------
+        model : Model
+            model to solve.
+        """
+        model.setParam("display/verblevel", 0)
+        prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
+        model.writeProblem(prob_file.name, verbose=False)
+
+        self.solve(prob_file.name)
+        prob_file.close()
 
     @abstractmethod
     def __getitem__(self, item: str) -> float:
         """
-        Get an attribute from the solver after a solve.
+        Get an attribute from the solver after a solving process.
 
         Parameters
         ----------
@@ -87,23 +114,6 @@ class ScipSolver(Solver):
                     return self.model.getTreesizeEstimation()
             case _:
                 raise KeyError
-
-    def solve_model(self, model: Model):
-        """
-        A scip solver can solve directly a pyscipopt model.
-        Parameters
-        ----------
-        model : Model
-            model to solve.
-        """
-        self.build_model() # Must build a new model each time due to some ecole dependencies
-        model.setParam("display/verblevel", 0)
-        prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
-        model.writeProblem(prob_file.name, verbose=False)
-
-        self.solve(prob_file.name)
-        prob_file.close()
-
 
     def __getstate__(self):
         return self.scip_params, self.configure

@@ -4,6 +4,9 @@ from pyscipopt import Model
 
 
 class Instances(ABC):
+    """
+    An Instances object is an iterator that yields pyscipopt.Model.
+    """
     def __iter__(self):
         return self
 
