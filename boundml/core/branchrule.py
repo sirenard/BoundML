@@ -24,3 +24,9 @@ class BoundmlBranchrule(Branchrule):
                 passive = True
 
         return {"result": result}
+
+    def branchexecps(self, allowaddcons):
+        # Todo Does not run and let SCIP manage this case. Must find a way for branching components to manage this case
+        result = SCIP_RESULT.DIDNOTRUN
+
+        return {"result": result}
