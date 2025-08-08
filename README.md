@@ -34,6 +34,10 @@ import ecole
 If `import ecole` failed, you can still use all the tools from `boundml` except for the classes that are wrapper around
 `ecole`.
 
+If you encounter some errors to some unknown references on `pyscipopt` objects, you may need to install `pyscipopt`
+based on its github repository because `boundml` may use some non-released calls to pyscipopt:
+`pip install git+https://github.com/scipopt/PySCIPOpt`
+
 # How to ...
 
 ## ... Create my own branching strategy ?
@@ -82,7 +86,7 @@ class MyBranchingStrategy(ScoringBranchingStrategy):
 
 ```
 
-## ... Test my branching strategy
+## ... Test my branching strategy ?
 
 Once a branching strategy is built as an `Observer`, it is easy to compare it with different solvers' configuration.
 For this example, we will compare 3 solvers. One that uses the default SCIP branching strategy relpscost, a second one
@@ -152,7 +156,7 @@ design your own workflow to train a model, and use this model in an `Observer` t
 
 `DatasetGenerator` can be useful to generate a dataset.
 
-## ... Solve MIPLIB instances
+## ... Solve MIPLIB instances ?
 
 It is very easy to evaluate your solvers on MIPLIB instances using the instances Iterator `MipLibInstances`. It
 downloads automatically the instances and cache them make the download only once.
