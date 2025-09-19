@@ -40,6 +40,7 @@ class ScoringBranchingStrategy(BranchingComponent):
     """
     def __init__(self):
         super().__init__()
+        self.scores = None
 
     @abstractmethod
     def compute_scores(self, model: Model) -> np.ndarray:
@@ -76,17 +77,26 @@ class ScoringBranchingStrategy(BranchingComponent):
         SCIP_RESULT.BRANCHED if passive==False, SCIP_RESULT.DIDNOTRUN otherwise
         """
         candidates, candidates_sols, *_ = model.getLPBranchCands()
-        scores = self.compute_scores(model)
+        self.scores = self.compute_scores(model)
 
         if passive:
             return SCIP_RESULT.DIDNOTRUN
-        elif np.nan in scores:
+        elif np.nan in self.scores:
             return SCIP_RESULT.CUTOFF
         else:
-            index = np.argmax(scores)
+            index = np.argmax(self.scores)
             model.branchVarVal(candidates[index], candidates_sols[index])
 
             return SCIP_RESULT.BRANCHED
+
+    def get_last_scores(self):
+        """
+        Get the last score for each branching candidate used on the last callback
+        Returns
+        -------
+        np.ndarray with a size of the number of branching candidates
+        """
+        return self.scores
 
 
 

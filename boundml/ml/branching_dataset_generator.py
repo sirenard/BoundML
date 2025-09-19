@@ -92,7 +92,7 @@ class DatasetStorer(BranchingComponent):
         if scores_are_expert and (self.max_samples < 0 or self.sample_counter < self.max_samples):
             self.sample_counter += 1
 
-            expert_scores = self.expert_strategy.scores
+            expert_scores = self.expert_strategy.get_last_scores()
 
             candidates, *_ = model.getLPBranchCands()
             action_set = [var.getCol().getLPPos() for var in candidates]
