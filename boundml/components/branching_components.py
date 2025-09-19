@@ -42,7 +42,7 @@ class ScoringBranchingStrategy(BranchingComponent):
         super().__init__()
 
     @abstractmethod
-    def compute_scores(self, model: Model) -> np.array:
+    def compute_scores(self, model: Model) -> np.ndarray:
         """
         Compute scores for each branching candidate.
         scores[i] must contain the score for i th candidate
@@ -55,7 +55,7 @@ class ScoringBranchingStrategy(BranchingComponent):
 
         Returns
         ----------
-        np.array with a size of the number of branching candidates
+        np.ndarray with a size of the number of branching candidates
         """
         candidates, *_ = model.getLPBranchCands()
         scores = np.zeros(len(candidates))
@@ -75,7 +75,7 @@ class ScoringBranchingStrategy(BranchingComponent):
         -------
         SCIP_RESULT.BRANCHED if passive==False, SCIP_RESULT.DIDNOTRUN otherwise
         """
-        candidates, *_ = model.getLPBranchCands()
+        candidates, candidates_sols, *_ = model.getLPBranchCands()
         scores = self.compute_scores(model)
 
         if passive:
@@ -84,15 +84,14 @@ class ScoringBranchingStrategy(BranchingComponent):
             return SCIP_RESULT.CUTOFF
         else:
             index = np.argmax(scores)
-            best_cand = candidates[index]
-            model.branchVar(best_cand)
+            model.branchVarVal(candidates[index], candidates_sols[index])
 
             return SCIP_RESULT.BRANCHED
 
 
 
 class Pseudocosts(ScoringBranchingStrategy):
-    def compute_scores(self, model: Model) -> None:
+    def compute_scores(self, model: Model) -> np.ndarray:
         """
         Compute pseudocosts scores for each candidate.
         Parameters
@@ -127,10 +126,11 @@ class StrongBranching(ScoringBranchingStrategy):
         all_scores : bool
             Whether all the candidates are scored. If True, the scoring is done when it is possible to cut the node
         """
+        super().__init__()
         self.priocands = priocands
         self.all_scores = all_scores
 
-    def compute_scores(self, model: Model) -> None:
+    def compute_scores(self, model: Model) -> np.ndarray:
         scores = super().compute_scores(model)
 
         branch_cands, branch_cand_sols, branch_cand_fracs, ncands, npriocands, nimplcands = model.getLPBranchCands()
@@ -196,6 +196,7 @@ class StrongBranching(ScoringBranchingStrategy):
 
             scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
 
+        model.endStrongbranch()
         return scores
 
     def __str__(self):
@@ -221,7 +222,7 @@ class AccuracyBranching(ScoringBranchingStrategy):
         self.oracle_strategy.reset(model)
         self.model_strategy.reset(model)
 
-    def compute_scores(self, model: Model) -> None:
+    def compute_scores(self, model: Model) -> np.ndarray:
         scores = super().compute_scores(model)
 
         oracle_scores = self.oracle_strategy.compute_scores(model)
