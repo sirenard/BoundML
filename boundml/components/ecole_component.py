@@ -21,16 +21,28 @@ class EcoleComponent(BranchingComponent):
                 "EcoleComponent requires 'ecole-fork' package. "
                 "Install with: pip install boundml[ecole]"
             )
+
+        self.is_reset = False
         self.observer = observer
         self.ecole_model = None
 
     def reset(self, model: Model) -> None:
+        # Several call to reset in certain use cases. It can cause issues as they all try to take ownership on
+        # the scip pointer.
+        if self.is_reset:
+            return
+
+        self.is_reset = True
         self.ecole_model = ecole.scip.Model.from_pyscipopt(model)
         self.observer.before_reset(self.ecole_model)
 
     def callback(self, model: Model, passive: bool=True):
         self.observation = self.observer.extract(self.ecole_model, done=False)
         return None
+
+    def done(self, model: Model) -> None:
+        super().done(model)
+        self.is_reset = False
 
     def __getstate__(self):
         return type(self.observer)
