@@ -87,6 +87,7 @@ class DatasetStorer(BranchingComponent):
         self.state_component_observer.reset(model)
 
     def callback(self, model: Model, passive: bool = True):
+        self.state_component_observer.callback(model, True)
         res = self.conditional_strategy.callback(model, passive=passive)
         scores_are_expert = self.conditional_strategy.get_last_observer_index_used() == 0
         if scores_are_expert and (self.max_samples < 0 or self.sample_counter < self.max_samples):
@@ -102,7 +103,6 @@ class DatasetStorer(BranchingComponent):
             scores[:] = np.nan
             scores[action_set] = expert_scores
 
-            self.state_component_observer.callback(model, True)
             node_state = self.state_component_observer.observation
 
 
