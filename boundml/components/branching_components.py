@@ -127,7 +127,7 @@ class StrongBranching(ScoringBranchingStrategy):
     """
     Simple implementation of Strong Branching.
     """
-    def __init__(self, priocands: bool = False, all_scores: bool = True, allow_cutoff: bool = False):
+    def __init__(self, priocands: bool = False, all_scores: bool = True, allow_cutoff: bool = False, idempotent: bool = True):
         """
         Parameters
         ----------
@@ -137,11 +137,14 @@ class StrongBranching(ScoringBranchingStrategy):
             Whether all the candidates are scored. If True, the scoring is done when it is possible to cut the node
         allow_cutoff : bool
             Whether the cutoff is allowed.
+        idempotent: bool
+            Whether getVarStrongbranch calls are idempotent.
         """
         super().__init__()
         self.priocands = priocands
         self.all_scores = all_scores
         self.allow_cutoff = allow_cutoff
+        self.idempotent = idempotent
 
     def compute_scores(self, model: Model) -> np.ndarray:
         scores = super().compute_scores(model)
@@ -177,7 +180,7 @@ class StrongBranching(ScoringBranchingStrategy):
 
             # Strong branch!
             down, up, downvalid, upvalid, downinf, upinf, downconflict, upconflict, lperror = model.getVarStrongbranch(
-                branch_cands[i], 200, idempotent=False)
+                branch_cands[i], 200, idempotent=self.idempotent)
 
             # In the case of an LP error handle appropriately (for this example we just break the loop)
             if lperror:
