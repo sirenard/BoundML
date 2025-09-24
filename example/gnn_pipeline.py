@@ -30,7 +30,7 @@ generator = BranchingDatasetGenerator(instances, StrongBranching(), state_compon
 
 folder = "samples"
 
-generator.generate(folder_name=folder, max_instances=5)
+generator.generate(folder_name=folder, max_instances=100)
 
 train(sample_folder=folder, learning_rate=0.05, n_epochs=10, output="agent.pkl")
 
