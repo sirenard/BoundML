@@ -127,7 +127,7 @@ class StrongBranching(ScoringBranchingStrategy):
     """
     Simple implementation of Strong Branching.
     """
-    def __init__(self, priocands: bool = False, all_scores: bool = True):
+    def __init__(self, priocands: bool = False, all_scores: bool = True, allow_cutoff: bool = False):
         """
         Parameters
         ----------
@@ -135,10 +135,13 @@ class StrongBranching(ScoringBranchingStrategy):
             Whether the scoring is only done on priocands
         all_scores : bool
             Whether all the candidates are scored. If True, the scoring is done when it is possible to cut the node
+        allow_cutoff : bool
+            Whether the cutoff is allowed.
         """
         super().__init__()
         self.priocands = priocands
         self.all_scores = all_scores
+        self.allow_cutoff = allow_cutoff
 
     def compute_scores(self, model: Model) -> np.ndarray:
         scores = super().compute_scores(model)
@@ -181,7 +184,7 @@ class StrongBranching(ScoringBranchingStrategy):
                 break
 
             # In the case of both infeasible sub-problems cutoff the node
-            if downinf and upinf:
+            if self.allow_cutoff and downinf and upinf:
                 scores[i] = np.nan
                 continue
 
