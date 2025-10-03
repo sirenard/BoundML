@@ -335,7 +335,11 @@ def pad_tensor(input_, pad_sizes, pad_value=-1e8):
 
 
 def train(sample_folder: str, learning_rate: float, n_epochs: int, output="agent.pkl", policy=None,
-          dataset=GraphDataset, **kwargs):
+          dataset=GraphDataset, patience=5, reduce_factor=0.2, n_epochs_without_improvement=None, **kwargs):
+
+    if n_epochs_without_improvement is None:
+        n_epochs_without_improvement = n_epochs
+
     sample_files = get_sample_files(sample_folder)
     train_files = sample_files[: int(0.8 * len(sample_files))]
     valid_files = sample_files[int(0.8 * len(sample_files)):]
@@ -364,7 +368,11 @@ def train(sample_folder: str, learning_rate: float, n_epochs: int, output="agent
     # print(action_distribution)
 
     optimizer = torch.optim.Adam(policy.parameters(), lr=learning_rate)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.2, patience=5, threshold=1e-2)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=reduce_factor, patience=patience, threshold=1e-3)
+
+    best_loss = float("inf")
+    epochs_since_improvement = 0
+
     for epoch in range(n_epochs):
         lr = optimizer.param_groups[0]['lr']
         print(f"Epoch {epoch + 1}, lr {lr}")
@@ -379,6 +387,13 @@ def train(sample_folder: str, learning_rate: float, n_epochs: int, output="agent
 
         torch.save(policy.state_dict(), output)
 
+        epochs_since_improvement += 1
+        if valid_loss < best_loss:
+            best_loss = valid_loss
+            epochs_since_improvement = 0
+
+        if epochs_since_improvement >= n_epochs_without_improvement:
+            return policy
     return policy
 
 
