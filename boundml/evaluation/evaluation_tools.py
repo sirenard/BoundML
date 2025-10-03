@@ -27,7 +27,7 @@ def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metri
     async_results = {}
 
     # Start the jobs
-    with mp.Pool(processes=n_cpu) as pool:
+    with mp.Pool(processes=n_cpu, maxtasksperchild=1) as pool:
         for i, instance in zip(range(n_instances), instances):
             for j, solver in enumerate(solvers):
                 prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
