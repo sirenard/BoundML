@@ -180,7 +180,7 @@ class StrongBranching(ScoringBranchingStrategy):
 
             # Strong branch!
             down, up, downvalid, upvalid, downinf, upinf, downconflict, upconflict, lperror = model.getVarStrongbranch(
-                branch_cands[i], 200, idempotent=self.idempotent)
+                branch_cands[i], model.infinity(), idempotent=self.idempotent)
 
             # In the case of an LP error handle appropriately (for this example we just break the loop)
             if lperror:
