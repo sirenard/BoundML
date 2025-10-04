@@ -152,65 +152,27 @@ class StrongBranching(ScoringBranchingStrategy):
         branch_cands, branch_cand_sols, branch_cand_fracs, ncands, npriocands, nimplcands = model.getLPBranchCands()
 
         n = npriocands if self.priocands else ncands
-        # Initialise scores for each variable
-        down_bounds = [None for _ in range(npriocands)]
-        up_bounds = [None for _ in range(npriocands)]
 
-        # Initialise placeholder values
-        num_nodes = model.getNNodes()
         lpobjval = model.getLPObjVal()
 
         # Start strong branching and iterate over the branching candidates
         model.startStrongbranch()
         for i in range(n):
-
-            # Check the case that the variable has already been strong branched on at this node.
-            # This case occurs when events happen in the node that should be handled immediately.
-            # When processing the node again (because the event did not remove it), there's no need to duplicate work.
-            if model.getVarStrongbranchNode(branch_cands[i]) == num_nodes:
-                down, up, downvalid, upvalid, _, lastlpobjval = model.getVarStrongbranchLast(branch_cands[i])
-                if downvalid:
-                    down_bounds[i] = down
-                if upvalid:
-                    up_bounds[i] = up
-                downgain = max([down - lastlpobjval, 0])
-                upgain = max([up - lastlpobjval, 0])
-                scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
-                continue
-
             # Strong branch!
             down, up, downvalid, upvalid, downinf, upinf, downconflict, upconflict, lperror = model.getVarStrongbranch(
                 branch_cands[i], 2147483647, idempotent=self.idempotent)
 
-            # In the case of an LP error handle appropriately (for this example we just break the loop)
-            if lperror:
-                break
-
-            # In the case of both infeasible sub-problems cutoff the node
-            if self.allow_cutoff and downinf and upinf:
-                scores[i] = np.nan
-                continue
-
-            # Calculate the gains for each up and down node that strong branching explored
-            if not downinf and downvalid:
-                down_bounds[i] = down
-                downgain = max([down - lpobjval, 0])
-            else:
-                downgain = 0
-            if not upinf and upvalid:
-                up_bounds[i] = up
-                upgain = max([up - lpobjval, 0])
-            else:
-                upgain = 0
-
-            # Update the pseudo-costs
-            lpsol = branch_cands[i].getLPSol()
-            if not downinf and downvalid:
-                model.updateVarPseudocost(branch_cands[i], -model.frac(lpsol), downgain, 1)
-            if not upinf and upvalid:
-                model.updateVarPseudocost(branch_cands[i], 1 - model.frac(lpsol), upgain, 1)
+            down = max(down, lpobjval)
+            up = max(up, lpobjval)
+            downgain = down - lpobjval
+            upgain = up - lpobjval
 
             scores[i] = model.getBranchScoreMultiple(branch_cands[i], [downgain, upgain])
+
+            # In the case of both infeasible sub-problems cutoff the node
+            if not self.all_scores and self.allow_cutoff and downinf and upinf:
+                scores[i] = np.nan
+                continue
 
         model.endStrongbranch()
         return scores
