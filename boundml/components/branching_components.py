@@ -185,8 +185,11 @@ class AccuracyBranching(ScoringBranchingStrategy):
     """
     AccuracyBranchingComponent is a component that depends on 2 ScoringBranchingStrategy.
     Generally an oracle, and another one that tries to imitate the oracle.
-    It outputs the same results as the oracle, but in addition stores for each branching decision at which position the
-    second component would have ranked the oracle's decision
+    It outputs the same results as the model, but in addition stores for each branching decision at which position the
+    second component best candidate would have been ranked by the oracle. This allows to compare good the model's
+    decisions are comparedd to its oracle.
+    /!\ If used by a solver during an evaluate_solvers call, the evaluate_solvers must use only one CPU to gather data
+    from each solving process
     """
 
     def __init__(self, oracle: ScoringBranchingStrategy, model: ScoringBranchingStrategy):
@@ -206,9 +209,9 @@ class AccuracyBranching(ScoringBranchingStrategy):
         oracle_scores = self.oracle_strategy.compute_scores(model)
         model_scores = self.model_strategy.compute_scores(model)
 
-        scores = oracle_scores
+        scores = model_scores
 
-        best_index = np.argmax(model_scores)
+        best_index = np.argmax(model_scores) # model's choice
         oracle_sorted_indexes = np.argsort(-oracle_scores)
 
         position = np.where(oracle_sorted_indexes == best_index)[0][0] + 1
@@ -224,6 +227,12 @@ class AccuracyBranching(ScoringBranchingStrategy):
 
     def get_observations(self):
         return np.array(self.observation)
+
+    def get_accuracy(self, n: int) -> float:
+        """
+        Returns the proportion of time when the model's choice is among the n bests candidates of its oracle
+        """
+        return np.average(self.get_observations() <= n)
 
     def __str__(self):
         return f"Acc {str(self.model_strategy)}"
