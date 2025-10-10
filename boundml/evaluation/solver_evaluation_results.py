@@ -75,13 +75,6 @@ class SolverEvaluationResults:
 
             ys /= n_instances
             label = solver
-            if label == "relpscost":
-                label = "RPB"
-            elif "GNN" in label and "sb" in label:
-                label = "$LSB$"
-            elif "GNN" in label and "ub" in label:
-                x = label.split("_")[4]
-                label = f"$LLB^{x}$"
 
             if logx:
                 auc = np.trapezoid(ys, np.log(xs)) / np.log(max)
@@ -135,11 +128,14 @@ class SolverEvaluationResults:
     def nwins(metric, dir=1):
         def get_wins(evaluationResults: SolverEvaluationResults):
             data = evaluationResults.get_metric_data(metric)
+            gaps = evaluationResults.get_metric_data("gap")
             res = []
             for i in range(len(evaluationResults.solvers)):
                 c = 0
                 for j in range(len(data[:, i])):
-                    c += dir * data[j, i] <= dir * np.min(data[j, :])
+                    # Does not count as a win if the instance was not solved optimally.
+                    if gaps[j, i] == 0 or metric == "gap":
+                        c += dir * data[j, i] <= dir * np.min(data[j, :])
                 res.append(c)
             return np.array(res)
 
