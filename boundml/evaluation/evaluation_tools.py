@@ -78,7 +78,8 @@ def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metri
 
     means = {}
     for k, metric in enumerate(metrics):
-        mean = res.aggregate(metrics[k], lambda values: shifted_geometric_mean(values, shift=ss[metric]))
+        s = ss[metric] if metric in ss else 1
+        mean = res.aggregate(metrics[k], lambda values: shifted_geometric_mean(values, shift=s))
         means[metrics[k]] = mean
 
     info = []
