@@ -42,7 +42,7 @@ def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metri
                     files[i,j] = prob_file
                     async_results[i,j] = pool.apply_async(_solve, [solver, prob_file.name, metrics])
 
-            for i, instance in range(n_instances):
+            for i in range(n_instances):
                 print(f"{i:<15}", end="")
                 for j, solver in enumerate(solvers):
                     line = async_results[i,j].get()
