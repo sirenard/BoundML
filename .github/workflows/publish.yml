@@ -1,0 +1,67 @@
+name: Publish to PyPI on release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  # Needed for OIDC (Trusted Publishing)
+  id-token: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      # Optional: ensure tag == package version to avoid accidental mismatches
+      - name: Verify release tag matches project version
+        id: verify
+        run: |
+          PKG_VERSION=$(python -c "import pathlib, re; p=pathlib.Path('pyproject.toml').read_text(); \
+            m=re.search(r'version\\s*=\\s*\"([^\"]+)\"', p); print(m.group(1))")
+          echo "pkg_version=$PKG_VERSION" >> $GITHUB_OUTPUT
+          TAG="${GITHUB_REF_NAME}"
+          if [ "$PKG_VERSION" != "$TAG" ] && [ "$TAG" != "v$PKG_VERSION" ]; then
+            echo "Tag ($TAG) does not match version ($PKG_VERSION)"; exit 1
+          fi
+
+      # Decide PyPI vs TestPyPI: if the release is marked 'prerelease' OR tag contains a/b/rc -> TestPyPI
+      - name: Determine repository
+        id: repo
+        run: |
+          # GH release metadata indicates prerelease
+          PRE="${{ github.event.release.prerelease }}"
+          TAG="${GITHUB_REF_NAME}"
+          if [ "$PRE" = "true" ] || echo "$TAG" | grep -Eiq '(a|b|rc)'; then
+            echo "repository=testpypi" >> $GITHUB_OUTPUT
+            echo "url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
+          else
+            echo "repository=pypi" >> $GITHUB_OUTPUT
+            echo "url=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ steps.repo.outputs.url }}
+          packages-dir: dist/

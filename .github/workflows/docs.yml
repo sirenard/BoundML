@@ -2,9 +2,9 @@ name: website
 
 # build the documentation whenever there are new commits on main
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [ published ]
+  workflow_dispatch: { }
 
 # security: restrict permissions for CI jobs.
 permissions:
@@ -45,6 +45,8 @@ jobs:
             pip install -e ./
             pip install pdoc
             pdoc boundml/__init__.py -o docs  --docformat numpy -e boundml=https://github.com/sirenard/BoundML/boundml/
+
+      - run: touch docs/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
         with:
