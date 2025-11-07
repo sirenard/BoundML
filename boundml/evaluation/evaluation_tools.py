@@ -56,7 +56,7 @@ def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metri
         for i, instance in zip(range(n_instances), instances):
             print(f"{i:<15}", end="")
             for j, solver in enumerate(solvers):
-                prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
+                prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
                 instance.writeProblem(prob_file.name, verbose=False)
 
                 files[i, j] = prob_file
