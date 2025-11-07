@@ -36,7 +36,7 @@ def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metri
         with mp.Pool(processes=n_cpu, maxtasksperchild=1) as pool:
             for i, instance in zip(range(n_instances), instances):
                 for j, solver in enumerate(solvers):
-                    prob_file = tempfile.NamedTemporaryFile(suffix=".lp")
+                    prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
                     instance.writeProblem(prob_file.name, verbose=False)
 
                     files[i,j] = prob_file
