@@ -8,7 +8,7 @@ version = "1.2.1"
 authors = [
     { name="Simon Renard", email="simon.renard@ulb.be" },
 ]
-description = "BoundML is a toolbox that helps with the development and evaluation of machine learning approach for the branch and bound algorithm."
+description = "BoundML is a toolbox to evaluate and compare branch and bound solvers. It allows to easily develop and compare new machine learning based (or not) branching strategies for the Branch and Bound."
 readme = "README.md"
 license = { file="LICENSE" }
 requires-python = ">=3.7"

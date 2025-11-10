@@ -1,7 +1,7 @@
 # What is boundml ?
 
-BoundML is a toolbox to evaluate and compare branch and bound solvers.
-It allows to easily develop new machine learning based (or not) branching strategies for the Branch and Bound.
+BoundML is a toolbox to evaluate and compare branch and bound solvers. 
+It allows to easily develop and compare new machine learning based (or not) branching strategies for the Branch and Bound.
 
 It comes with several submodules:
 
