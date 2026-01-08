@@ -125,7 +125,7 @@ class SolverEvaluationResults:
                 )
 
     @staticmethod
-    def nwins(metric, dir=1):
+    def nwins(metric, dir=1, count_if_not_optimal = False):
         def get_wins(evaluationResults: SolverEvaluationResults):
             data = evaluationResults.get_metric_data(metric)
             gaps = evaluationResults.get_metric_data("gap")
@@ -134,7 +134,7 @@ class SolverEvaluationResults:
                 c = 0
                 for j in range(len(data[:, i])):
                     # Does not count as a win if the instance was not solved optimally.
-                    if gaps[j, i] == 0 or metric == "gap":
+                    if count_if_not_optimal or gaps[j, i] == 0 or metric == "gap":
                         c += dir * data[j, i] <= dir * np.min(data[j, :])
                 res.append(c)
             return np.array(res)
