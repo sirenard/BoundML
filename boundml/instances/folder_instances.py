@@ -32,7 +32,7 @@ class FolderInstances(Instances):
         self._index = 0
         self.allow_reading_error = allow_reading_error
 
-    def __next__(self):
+    def __next__(self) -> str:
         if self._index >= len(self._instances_files):
             raise StopIteration
 
@@ -49,9 +49,7 @@ class FolderInstances(Instances):
                     f"Failed to read problem {path}." + "Skipping to the next one." if self.allow_reading_error else "")
                 return next(self)
 
-        model.readProblem(path)
-
-        return model
+        return path
 
     def seed(self, seed: int):
         """

@@ -1,6 +1,6 @@
 import multiprocessing
 import tempfile
-from typing import Any
+from typing import Any, List
 
 import dill
 import pathos.multiprocessing as mp
@@ -17,8 +17,17 @@ def _solve(solver, prob_file_name, metrics):
     solver.solve(prob_file_name)
     return [solver[metric] for metric in metrics]
 
+def _get_next_file(instances: Instances):
+    instance = next(instances)
 
-def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metrics, n_cpu=0):
+    if type(instance) == str:
+        return instance, None
+    else:
+        prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
+        instance.writeProblem(prob_file.name, verbose=False)
+        return prob_file.name, prob_file
+
+def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances, metrics, n_cpu=0):
     if n_cpu == 0:
         n_cpu = mp.cpu_count()
 
@@ -36,37 +45,40 @@ def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metri
     if n_cpu > 1:
         ctx = multiprocessing.get_context("spawn")
         with mp.Pool(processes=n_cpu, maxtasksperchild=1, context=ctx) as pool:
-            for i, instance in zip(range(n_instances), instances):
+            for i in range(n_instances):
+                file_name, prob_file = _get_next_file(instances)
+                files[i] = prob_file
                 for j, solver in enumerate(solvers):
-                    prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
-                    instance.writeProblem(prob_file.name, verbose=False)
-
-                    files[i,j] = prob_file
-                    async_results[i,j] = pool.apply_async(_solve, [solver, prob_file.name, metrics])
+                    async_results[i,j] = pool.apply_async(_solve, [solver, file_name, metrics])
 
             for i in range(n_instances):
                 print(f"{i:<15}", end="")
                 for j, solver in enumerate(solvers):
                     line = async_results[i,j].get()
-                    files[i,j].close()
+
                     for k, d in enumerate(line):
                         data[i, j, k] = d
                     _print_result(line)
 
+                if files[i] is not None:
+                    files[i].close()
+
                 print()
     else:
-        for i, instance in zip(range(n_instances), instances):
+        for i in range(n_instances):
+            file_name, prob_file = _get_next_file(instances)
             print(f"{i:<15}", end="")
             for j, solver in enumerate(solvers):
-                prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
-                instance.writeProblem(prob_file.name, verbose=False)
 
-                files[i, j] = prob_file
-                line = _solve(solver, prob_file.name, metrics)
+                line = _solve(solver, file_name, metrics)
+
                 for k, d in enumerate(line):
                     data[i, j, k] = d
                 _print_result(line)
             print()
+
+            if prob_file is not None:
+                prob_file.close()
 
     res = SolverEvaluationResults(data, [str(s) for s in solvers], metrics)
 

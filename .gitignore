@@ -3,3 +3,4 @@ build
 dist
 boundml.egg-info
 docs
+__pycache__
