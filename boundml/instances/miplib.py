@@ -28,7 +28,7 @@ class MipLibInstances(FolderInstances):
     }
 
     def __init__(self, subset: str = "benchmark", force_download: bool = False, force_extract: bool = False,
-                 filter: Callable[[str], bool] = lambda x: True):
+                 filter: Callable[[str], bool] = lambda x: True, allow_reading_error=True):
         """
         Parameters
         ----------
@@ -55,7 +55,7 @@ class MipLibInstances(FolderInstances):
         self._download(url, force_download)
         self._extract(force_download or force_extract)
 
-        super().__init__(str(self._instances_dir), filter)
+        super().__init__(str(self._instances_dir), filter, allow_reading_error=allow_reading_error)
 
     def _download(self, url: str, force: bool = False):
         if force or not self._zip_file.exists():
