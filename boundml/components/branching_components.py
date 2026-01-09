@@ -14,7 +14,7 @@ class BranchingComponent(Component):
     """
 
     @abstractmethod
-    def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT:
+    def callback(self, model: Model, passive: bool = True) -> SCIP_RESULT | None:
         """
         Callback method called by the solver when a branching decision is required.
         Is responsible to perform the branching as it wants if passive is False.
@@ -32,6 +32,13 @@ class BranchingComponent(Component):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
+
+class RootNodeBranchingComponent(BranchingComponent):
+    """
+    A RootNodeBranchingComponent is a BranchingComponent called only once at the beginning of the tree exploration.
+    The callback method is called only before the branching decision of **the root node**.
+    It is called before every other BranchingComponent.
+    """
 
 class ScoringBranchingStrategy(BranchingComponent):
     """

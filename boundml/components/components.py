@@ -27,7 +27,7 @@ class Component(ABC):
         pass
 
     @abstractmethod
-    def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT:
+    def callback(self, model: Model, passive: bool=True) -> SCIP_RESULT | None:
         """
         Callback method called by the solver.
         Depending on its subtype, it is used at different moment of the solving process
