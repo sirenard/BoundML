@@ -13,10 +13,6 @@ class FolderInstances(Instances):
     """
     FolderInstances allows to iterate through the instances in a folder.
     """
-    _archives_urls = {
-        "collection": "https://miplib.zib.de/downloads/collection.zip",
-        "benchmark": "https://miplib.zib.de/downloads/benchmark.zip"
-    }
 
     def __init__(self, folder: str, filter: Callable[[str], bool] = lambda x: True, allow_reading_error=True):
         """

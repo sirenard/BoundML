@@ -1,3 +1,4 @@
+import multiprocessing
 import tempfile
 from typing import Any
 
@@ -33,7 +34,8 @@ def evaluate_solvers(solvers: [Solver], instances: Instances, n_instances, metri
 
     # Start the jobs
     if n_cpu > 1:
-        with mp.Pool(processes=n_cpu, maxtasksperchild=1) as pool:
+        ctx = multiprocessing.get_context("spawn")
+        with mp.Pool(processes=n_cpu, maxtasksperchild=1, context=ctx) as pool:
             for i, instance in zip(range(n_instances), instances):
                 for j, solver in enumerate(solvers):
                     prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
