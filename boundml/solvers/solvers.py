@@ -8,6 +8,21 @@ class Solver(ABC):
     """
     An abstract base class for solvers.
     """
+
+    def __init__(self):
+        self.seed = 0
+
+
+    def seed(self, seed):
+        """
+        Seed used by the underground solver.
+        Parameters
+        ----------
+        seed : int
+            The new seed
+        """
+        self.seed = seed
+
     @abstractmethod
     def solve(self, instance: str):
         """
@@ -62,6 +77,7 @@ class ScipSolver(Solver):
         configure :  Callable[[Model], None], optional
             Callback function to configure the solver (e.g. add branching strategies, ...)
         """
+        super().__init__()
         self.scip_params = scip_params or {}
         self.configure = configure
         self.model = None
@@ -72,10 +88,10 @@ class ScipSolver(Solver):
         if self.configure is not None:
             self.configure(self.model)
         self.model.setParam("display/verblevel", 0)
+        self.model.setParam("randomization/randomseedshift", self.seed)
 
     def set_params(self, params):
         self.scip_params = params
-        self.model.setParams(self.scip_params)
 
     def __getitem__(self, item: str) -> float:
         """
