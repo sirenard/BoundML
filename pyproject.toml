@@ -19,8 +19,8 @@ classifiers = [
 ]
 dependencies = [
     "appdirs",
-    "ecole-fork",
     "pyscipopt",
+    "ecole-fork",
     "pathos",
     "dill",
     "torch",

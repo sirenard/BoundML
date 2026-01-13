@@ -34,7 +34,7 @@ jobs:
             sudo apt install librange-v3-dev librange-v3-doc
             conda env list
             conda info
-            conda install pip pyscipopt fmt pybind11 --channel conda-forge
+            conda install pip scip fmt pybind11 --channel conda-forge
             #p=$(conda info | grep  'env location' | sed 's: ::g')
             #CONDA_PREFIX=${p##*:}
             echo "Path: ${CONDA_PREFIX}"
