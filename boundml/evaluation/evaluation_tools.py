@@ -13,19 +13,53 @@ from boundml.solvers import Solver
 
 from boundml.core.utils import shifted_geometric_mean
 
+class TaskGenerator:
+    def __init__(self, solvers, instances, n_instances, metrics, files):
+        self.solvers = solvers
+        self.instances = instances
+        self.n_instances = n_instances
+        self.metrics = metrics
+        self.files = files
+        self.current_instance_path = None
+
+        self.i = 0
+        self.j = 0
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.i == self.n_instances - 1 and self.j == len(self.solvers) - 1:
+            raise StopIteration
+
+        if self.j == 0:
+            instance = next(self.instances)
+            if type(instance) == str:
+                self.current_instance_path = instance
+            else:
+                prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
+                instance.writeProblem(prob_file.name, verbose=False)
+                self.current_instance_path = prob_file.name
+                self.files[self.i] = prob_file
+
+
+        solver = self.solvers[self.j]
+
+        res = (self.i, self.j, solver, self.current_instance_path, self.metrics)
+        self.j += 1
+        if self.j == len(self.solvers):
+            self.j = 0
+            self.i += 1
+
+        return res
+
 def _solve(solver, prob_file_name, metrics):
     solver.solve(prob_file_name)
     return [solver[metric] for metric in metrics]
 
-def _get_next_file(instances: Instances):
-    instance = next(instances)
-
-    if type(instance) == str:
-        return instance, None
-    else:
-        prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
-        instance.writeProblem(prob_file.name, verbose=False)
-        return prob_file.name, prob_file
+def _solve_wrapper(args):
+    i, j, solver, instance_path, metrics = args
+    metrics_values = _solve(solver, instance_path, metrics)
+    return i, j, str(solver), metrics_values
 
 def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances, metrics, n_cpu=0):
     if n_cpu == 0:
@@ -36,49 +70,49 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances, m
     data = np.zeros((n_instances, len(solvers), len(metrics)))
 
     files = {}
-    async_results = {}
 
     print(f"{'Instance':<15}" + "".join([f"{str(solver):<{15 * len(metrics)}}" for solver in solvers]))
     print(f"{'':<15}" + len(solvers) * ("".join([f"{metric:<15}" for metric in metrics])))
+
+    task_generator = TaskGenerator(
+        solvers,
+        iter(instances),
+        n_instances,
+        metrics,
+        files,
+    )
 
     # Start the jobs
     if n_cpu > 1:
         ctx = multiprocessing.get_context("spawn")
         with mp.Pool(processes=n_cpu, maxtasksperchild=1, context=ctx) as pool:
-            for i in range(n_instances):
-                file_name, prob_file = _get_next_file(instances)
-                files[i] = prob_file
-                for j, solver in enumerate(solvers):
-                    async_results[i,j] = pool.apply_async(_solve, [solver, file_name, metrics])
+            results_stream = pool.imap(_solve_wrapper, task_generator, chunksize=1)
 
-            for i in range(n_instances):
-                print(f"{i:<15}", end="")
-                for j, solver in enumerate(solvers):
-                    line = async_results[i,j].get()
-
-                    for k, d in enumerate(line):
-                        data[i, j, k] = d
-                    _print_result(line)
-
-                if files[i] is not None:
-                    files[i].close()
-
-                print()
-    else:
-        for i in range(n_instances):
-            file_name, prob_file = _get_next_file(instances)
-            print(f"{i:<15}", end="")
-            for j, solver in enumerate(solvers):
-
-                line = _solve(solver, file_name, metrics)
+            for i, j, solver_name, line in results_stream:
+                if j == 0: # new line
+                    print(f"{i:<15}", end="")
 
                 for k, d in enumerate(line):
                     data[i, j, k] = d
                 _print_result(line)
-            print()
 
-            if prob_file is not None:
-                prob_file.close()
+                if j == len(solvers) - 1 and i in files:
+                    files[i].close()
+                    print()
+    else:
+        for args in task_generator:
+            i, j, solver_name, line = _solve_wrapper(args)
+
+            if j == 0:  # new line
+                print(f"{i:<15}", end="")
+
+            for k, d in enumerate(line):
+                data[i, j, k] = d
+            _print_result(line)
+
+            if j == len(solvers) - 1 and i in files:
+                files[i].close()
+                print()
 
     res = SolverEvaluationResults(data, [str(s) for s in solvers], metrics)
 
@@ -110,17 +144,4 @@ def _print_result(line: list[Any]):
 
 
 if __name__ == "__main__":
-    data: SolverEvaluationResults = dill.load(open("../data", "rb"))
-
-    r = data.compute_report(
-        SolverEvaluationResults.sg_metric("nnodes", 10),
-        SolverEvaluationResults.sg_metric("time", 1),
-        SolverEvaluationResults.nwins("nnodes"),
-        SolverEvaluationResults.nsolved(),
-        SolverEvaluationResults.auc_score("time"),
-    )
-
-    print(r)
-
-    data.performance_profile(metric="time")
-    data.performance_profile(metric="nnodes")
+    pass
