@@ -3,7 +3,7 @@ import tempfile
 from typing import Any, List
 
 import numpy as np
-import pathos.multiprocessing as mp
+import multiprocessing as mp
 
 from boundml.core.utils import shifted_geometric_mean
 from boundml.evaluation.solver_evaluation_results import SolverEvaluationResults
@@ -135,7 +135,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
     # Start the jobs
     if n_cpu > 1:
         ctx = multiprocessing.get_context("spawn")
-        with mp.Pool(processes=n_cpu, maxtasksperchild=1, context=ctx) as pool:
+        with ctx.Pool(processes=n_cpu, maxtasksperchild=1) as pool:
             results_stream = pool.imap(_solve_wrapper, task_generator, chunksize=1)
 
             for solve_res in results_stream:
