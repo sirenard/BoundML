@@ -136,13 +136,13 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances, m
     for j in range(len(solvers)):
         for metric in metrics:
             info.append(means[metric][j])
-    print(f"{'sg mean': <15}" + "".join([f"{val: <15.3f}" for val in info]))
+    print(f"{'sg mean': <15}" + "".join([f"{val: <15.5g}" for val in info]))
 
     return res
 
 
 def _print_result(line: list[Any]):
-    print("".join([f"{d:{'<15.3f' if type(d) == float else '<15'}}" for d in line]), end="", flush=True)
+    print("".join([f"{d:<15.5g}" for d in line]), end="", flush=True)
 
 
 if __name__ == "__main__":
