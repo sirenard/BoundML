@@ -96,9 +96,10 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances, m
                     data[i, j, k] = d
                 _print_result(line)
 
-                if j == len(solvers) - 1 and i in files:
-                    files[i].close()
+                if j == len(solvers) - 1:
                     print()
+                    if i in files:
+                        files[i].close()
     else:
         for args in task_generator:
             i, j, solver_name, line = _solve_wrapper(args)
@@ -110,9 +111,10 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances, m
                 data[i, j, k] = d
             _print_result(line)
 
-            if j == len(solvers) - 1 and i in files:
-                files[i].close()
+            if j == len(solvers) - 1:
                 print()
+                if i in files:
+                    files[i].close()
 
     res = SolverEvaluationResults(data, [str(s) for s in solvers], metrics)
 
