@@ -84,7 +84,7 @@ class ScipSolver(Solver):
 
     def build_model(self):
         self.model = Model()
-        self.set_params(self.scip_params)
+        self.model.setParams(self.scip_params)
         if self.configure is not None:
             self.configure(self.model)
         self.model.setParam("display/verblevel", 0)

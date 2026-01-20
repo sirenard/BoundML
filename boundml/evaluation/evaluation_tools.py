@@ -28,7 +28,7 @@ class TaskGenerator:
         return self
 
     def __next__(self):
-        if self.i == self.n_instances - 1 and self.j == len(self.solvers) - 1:
+        if self.i == self.n_instances:
             raise StopIteration
 
         if self.j == 0:
