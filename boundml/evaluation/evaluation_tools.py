@@ -122,7 +122,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
 
     def _process_result(i, j, line, instance_name):
         if j == 0:  # new line
-            print(f"{instance_name:<15}", end="")
+            print(f"{instance_name:<15}", end="", flush=True)
 
         for k, d in enumerate(line):
             data[i, j, k] = d
