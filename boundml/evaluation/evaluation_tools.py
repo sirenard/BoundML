@@ -1,11 +1,17 @@
 import multiprocessing
+import os
 import resource
+import signal
 import tempfile
+import threading
+import time
 import warnings
 from typing import Any, List
 
 import numpy as np
 import multiprocessing as mp
+
+import psutil
 
 from boundml.core.utils import shifted_geometric_mean
 from boundml.evaluation.solver_evaluation_results import SolverEvaluationResults
@@ -62,24 +68,28 @@ class TaskGenerator:
 
         return res
 
-def _limit_worker_memory(max_usage_bytes):
-    """
-    This function runs ONLY inside the child process.
-    It sets the limit just before the worker starts doing the heavy lifting.
-    """
-    if max_usage_bytes is None:
-        return
+def _monitor_memory(pid, limit_bytes, stop_event):
+    process = psutil.Process(pid)
+    while not stop_event.is_set():
+        try:
+            # Check strictly PHYSICAL memory (RSS)
+            rss = process.memory_info().rss
+            if rss > limit_bytes:
+                warnings.warn(f"[{pid}] KILLED: Used {rss/1024**3:.2f} GB > Limit {limit_bytes/1024**3:.2f} GB")
 
-    try:
-        resource.setrlimit(resource.RLIMIT_AS, (max_usage_bytes, max_usage_bytes))
-    except ValueError as e:
-        warnings.warn(f"Failed to set memory limit: {e}")
+                # Setting the RLIMIT_AS now will force the underlying solver to crash.
+                resource.setrlimit(resource.RLIMIT_AS, (limit_bytes, limit_bytes))
+                break
+        except psutil.NoSuchProcess:
+            break
+        time.sleep(1)
 
 def _solve(solver, prob_file_name, metrics, fail_on_error, fail_on_memory_error):
     try:
         solver.solve(prob_file_name)
         return [solver[metric] for metric in metrics]
     except MemoryError as e:
+        print(fail_on_memory_error)
         if fail_on_memory_error:
             raise e
         warnings.warn(f"Memory usage reached while solvign {prob_file_name} with {solver}")
@@ -91,8 +101,22 @@ def _solve(solver, prob_file_name, metrics, fail_on_error, fail_on_memory_error)
         return [0 for _ in metrics]
 
 def _solve_wrapper(args):
-    i, j, solver, instance_path, metrics, instance_name, fail_on_error, fail_on_memory_error = args
-    metrics_values = _solve(solver, instance_path, metrics, fail_on_error, fail_on_memory_error)
+    i, j, solver, instance_path, metrics, instance_name, fail_on_error, limit_rss_bytes = args
+
+    stop_event, watcher = None, None
+    if limit_rss_bytes is not None:
+        stop_event = threading.Event()
+        watcher = threading.Thread(target=_monitor_memory, args=(os.getpid(), limit_rss_bytes, stop_event))
+        watcher.start()
+
+    try:
+        metrics_values = _solve(solver, instance_path, metrics, fail_on_error, limit_rss_bytes is None)
+    finally:
+        if limit_rss_bytes is not None:
+            stop_event.set()
+            watcher.join()
+
+
     return i, j, metrics_values, instance_name
 
 
@@ -128,7 +152,9 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         Memory limit applied to the children processes in GB. If None, no limit is applied.
         When specified, if the child reach the memory limit, it catches the exception and cancel the solving process.
         All the resulting metrics are 0.
-        Default None
+        /!\ Unexpected behavior when n_cpu is 1. As no multiprocessing is used, it will change the memory limit
+        of the main process.
+        Default None.
     Returns
     -------
     Return a SolverEvaluationResults object which can be used to compute a report on the computed data.
@@ -137,11 +163,9 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
     if n_cpu == 0:
         n_cpu = mp.cpu_count()
 
-    fail_on_memory_error = limit_gbytes is None
-
-    limit_bytes = None
+    limit_rss_bytes = None
     if limit_gbytes is not None:
-        limit_bytes = limit_gbytes * (1024**3)
+        limit_rss_bytes = limit_gbytes * (1024**3)
 
     n_cpu = min(n_cpu, n_instances + 1)
 
@@ -160,7 +184,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         files,
         display_instance_names,
         fail_one_error,
-        fail_on_memory_error,
+        limit_rss_bytes
     )
 
     def _process_result(i, j, line, instance_name):
@@ -178,8 +202,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
     # Start the jobs
     if n_cpu > 1:
         ctx = multiprocessing.get_context("spawn")
-        with ctx.Pool(processes=n_cpu, maxtasksperchild=1, initializer=_limit_worker_memory,
-        initargs=(limit_bytes,)) as pool:
+        with ctx.Pool(processes=n_cpu, maxtasksperchild=1) as pool:
             results_stream = pool.imap(_solve_wrapper, task_generator, chunksize=1)
 
             for solve_res in results_stream:
