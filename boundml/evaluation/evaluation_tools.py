@@ -6,7 +6,7 @@ import tempfile
 import threading
 import time
 import warnings
-from typing import Any, List
+from typing import Any, List, Callable
 
 import numpy as np
 import multiprocessing as mp
@@ -121,7 +121,8 @@ def _solve_wrapper(args):
 
 
 def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: int, metrics: List[str], n_cpu: int = 0,
-                     display_instance_names: bool = False, fail_one_error: bool = False, limit_gbytes: int | None = None) -> SolverEvaluationResults:
+                     display_instance_names: bool = False, fail_one_error: bool = False, limit_gbytes: int | None = None,
+                     callback: Callable[[str, int, int, np.ndarray], None] | None = None) -> SolverEvaluationResults:
     """
     Evaluate a set of solvers against a set of instances in parallel.
     It prints as soon as possible the results for each solver on each instance.
@@ -155,6 +156,10 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         /!\ Unexpected behavior when n_cpu is 1. As no multiprocessing is used, it will change the memory limit
         of the main process.
         Default None.
+    callback: Callable[[str, int, int, np.ndarray], None] | None
+        Callback function called after an instance is solved by a solver. Take as argument the instance name,
+        the instance index, the solver index, the ndarray d containing all the results. d[i,j,:] contains all the
+        metrics from the solving of instances i by solver j.
     Returns
     -------
     Return a SolverEvaluationResults object which can be used to compute a report on the computed data.
@@ -193,8 +198,11 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
 
         for k, d in enumerate(line):
             data[i, j, k] = d
+
         _print_result(line)
 
+        if callback is not None:
+            callback(instance_name, i, j, data)
         if j == len(solvers) - 1:
             print()
             if i in files:
