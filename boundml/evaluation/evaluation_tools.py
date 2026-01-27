@@ -172,7 +172,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
     if limit_gbytes is not None:
         limit_rss_bytes = limit_gbytes * (1024**3)
 
-    n_cpu = min(n_cpu, n_instances + 1)
+    n_cpu = min(n_cpu, n_instances * len(solvers) + 1)
 
     data = np.zeros((n_instances, len(solvers), len(metrics)))
 
@@ -210,7 +210,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
     # Start the jobs
     if n_cpu > 1:
         ctx = multiprocessing.get_context("spawn")
-        with ctx.Pool(processes=n_cpu, maxtasksperchild=1) as pool:
+        with mp.Pool(processes=n_cpu) as pool:
             results_stream = pool.imap(_solve_wrapper, task_generator, chunksize=1)
 
             for solve_res in results_stream:
