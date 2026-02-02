@@ -153,7 +153,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         Memory limit applied to the children processes in GB. If None, no limit is applied.
         When specified, if the child reach the memory limit, it catches the exception and cancel the solving process.
         All the resulting metrics are 0.
-        /!\ Unexpected behavior when n_cpu is 1. As no multiprocessing is used, it will change the memory limit
+        /!\\ Unexpected behavior when n_cpu is 1. As no multiprocessing is used, it will change the memory limit
         of the main process.
         Default None.
     callback: Callable[[str, int, int, np.ndarray], None] | None
@@ -209,8 +209,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
                 files[i].close()
     # Start the jobs
     if n_cpu > 1:
-        ctx = multiprocessing.get_context("spawn")
-        with mp.Pool(processes=n_cpu) as pool:
+        with mp.Pool(processes=n_cpu, maxtasksperchild=1) as pool:
             results_stream = pool.imap(_solve_wrapper, task_generator, chunksize=1)
 
             for solve_res in results_stream:
