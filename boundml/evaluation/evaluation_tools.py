@@ -39,7 +39,7 @@ class TaskGenerator:
         if self.i == self.n_instances:
             raise StopIteration
 
-        if self.j == 0:
+        if self.j == 0 and self.s==0: # new instance
             instance = next(self.instances)
             if type(instance) == str:  # instance is a path
                 self.current_instance_path = instance

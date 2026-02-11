@@ -94,6 +94,8 @@ that uses pscost as branching strategy, and the last one that use our custom str
 
 Boundml provides easy tools to run the solvers on the same instances. In addition, it is easy to summarize the raw data
 by computing a report containing the metrics of interest (shifted geometric mean of a metric, number of wins, ...).
+The experiments can be repeated on several seeds. In this case, before computing the metric of interest, the average 
+over all the seeds is computed. It is possible to compute the average std over the seeds.
 
 The full example is available [here](example/branching_strategy.py).
 
@@ -114,31 +116,33 @@ solvers = [
 ]
 
 # Generator of instances on which to perform the evaluation
-instances = CombinatorialAuctionGenerator(100, 500)
+    instances = CombinatorialAuctionGenerator(100, 500)
 
-# Evaluate the solvers
-# data is a SolverEvaluationResults. It can be pickled to be saved and analyzed latter
-data = evaluate_solvers(
-    solvers,
-    instances,
-    10,  # number of instances to solve
-    ["nnodes", "time", "gap"],  # list of metrics of interes among ["nnodes", "time", "gap"]
-    0,  # Number of cores to use in parallel. If 0, use all the available cores
-)
+    # Evaluate the solvers
+    # data is a SolverEvaluationResults. It can be pickled to be saved and analyzed latter
+    data = evaluate_solvers(
+        solvers,
+        instances,
+        2, # number of instances to solve
+        ["nnodes", "time", "gap"], # list of metrics of interes among ["nnodes", "time", "gap"]
+        0, # Number of cores to use in parallel. If 0, use all the available cores
+        seeds=[0, 1, 3], # Each configuration is run once with each seed
+    )
 
-# Compute a report from the raw data.
-# The report aggregates different metrics for each solver.
-report = data.compute_report(
-    SolverEvaluationResults.sg_metric("nnodes", 10),  # SG mean of the number of nodes
-    SolverEvaluationResults.sg_metric("time", 1),  # SG mean of the time spent
-    SolverEvaluationResults.nwins("nnodes"),  # Number of time a solver has been the fastest
-    SolverEvaluationResults.nsolved(),  # Number of time a solver solved an instance to optimality
-    SolverEvaluationResults.auc_score("time"),  # AUC score with respect to time
-)
-
-# Display the report
-# It is possible to get a latex table from it: report.to_latex()
-print(report)
+    # Compute a report from the raw data.
+    # The report aggregates different metrics for each solver.
+    report = data.compute_report(
+        SolverEvaluationResults.sg_metric("nnodes", 10), # SG mean of the number of nodes
+        SolverEvaluationResults.sg_metric("time", 1), # SG mean of the time spent
+        SolverEvaluationResults.sg_metric("time", 1, std=True), # SG mean of the std overall instances w.r.t time
+        SolverEvaluationResults.nwins("nnodes"), # Number of time a solver has been the fastest
+        SolverEvaluationResults.nsolved(), # Number of time a solver solved an instance to optimality
+        SolverEvaluationResults.auc_score("time"), # AUC score with respect to time
+    )
+    print()
+    # Display the report
+    # It is possible to get a latex table from it: report.to_latex()
+    print(report)
 ```
 
 ## ... Learn a branching strategy ?

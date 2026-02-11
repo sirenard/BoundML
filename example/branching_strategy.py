@@ -57,6 +57,8 @@ if __name__ == "__main__":
         10, # number of instances to solve
         ["nnodes", "time", "gap"], # list of metrics of interes among ["nnodes", "time", "gap"]
         0, # Number of cores to use in parallel. If 0, use all the available cores
+        seeds=[0, 1, 3], # Each configuration is run once with each seed
+        fail_one_error=True,
     )
 
     # Compute a report from the raw data.
@@ -64,11 +66,12 @@ if __name__ == "__main__":
     report = data.compute_report(
         SolverEvaluationResults.sg_metric("nnodes", 10), # SG mean of the number of nodes
         SolverEvaluationResults.sg_metric("time", 1), # SG mean of the time spent
+        SolverEvaluationResults.sg_metric("time", 1, std=True), # SG mean of the std overall instances w.r.t time
         SolverEvaluationResults.nwins("nnodes"), # Number of time a solver has been the fastest
         SolverEvaluationResults.nsolved(), # Number of time a solver solved an instance to optimality
         SolverEvaluationResults.auc_score("time"), # AUC score with respect to time
     )
-
+    print()
     # Display the report
     # It is possible to get a latex table from it: report.to_latex()
     print(report)
