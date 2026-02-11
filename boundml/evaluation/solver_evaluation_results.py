@@ -20,13 +20,16 @@ class SolverEvaluationResults:
         """Returns a dictionary mapping metric names to their indices"""
         return {metric: idx for idx, metric in enumerate(self.metrics)}
 
-    def get_metric_data(self, metric: str, std=False) -> np.ndarray:
+    def get_metric_data(self, metric: str, std=False, count_zeros=False) -> np.ndarray:
         """Get all data for a specific metric. Average over all the seeds (or std if std=True)"""
         data = self.data[:, :, :, self.metric_index[metric]]
+        if not count_zeros:
+            mask = np.any(data.reshape(data.shape[0], -1) != 0, axis=1)
+            data = data[mask]
         f = np.std if std else np.mean
         return f(data, axis=2)
 
-    def aggregate(self, metric: str, aggregation_func: callable, std=False) -> np.ndarray:
+    def aggregate(self, metric: str, aggregation_func: callable, std=False, count_zeros=False) -> np.ndarray:
         """
         Apply aggregation function to a specific metric
         Args:
@@ -34,7 +37,7 @@ class SolverEvaluationResults:
             aggregation_func: function to apply (e.g., np.sum, np.mean)
             std: If True the aggregation is done on the std over the seeds. Else over the mean.
         """
-        return np.array([aggregation_func(self.get_metric_data(metric, std)[:, i]) for i in range(len(self.solvers))])
+        return np.array([aggregation_func(self.get_metric_data(metric, std, count_zeros)[:, i]) for i in range(len(self.solvers))])
 
     def split_instances_over(self, metric: str, condition):
         assert metric in self.metrics, "Cannot make a split on a non-existing metric"
@@ -126,14 +129,14 @@ class SolverEvaluationResults:
     def sg_metric(metric, s, std=False):
         name = metric if not std else f"{metric} std"
         return (name, lambda evaluationResults:
-        evaluationResults.aggregate(metric, lambda values: shifted_geometric_mean(values, shift=s), std)
+        evaluationResults.aggregate(metric, lambda values: shifted_geometric_mean(values, shift=s), std, count_zeros=False)
                 )
 
     @staticmethod
     def nwins(metric, dir=1, count_if_not_optimal = False):
         def get_wins(evaluationResults: SolverEvaluationResults):
-            data = evaluationResults.get_metric_data(metric)
-            gaps = evaluationResults.get_metric_data("gap")
+            data = evaluationResults.get_metric_data(metric, count_zeros=True)
+            gaps = evaluationResults.get_metric_data("gap", count_zeros=True)
             res = []
             for i in range(len(evaluationResults.solvers)):
                 c = 0
