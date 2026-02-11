@@ -13,7 +13,7 @@ class Solver(ABC):
         self.seed = 0
 
 
-    def seed(self, seed):
+    def set_seed(self, seed):
         """
         Seed used by the underground solver.
         Parameters

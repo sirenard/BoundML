@@ -1,3 +1,5 @@
+from typing import List
+
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -8,7 +10,7 @@ from boundml.core.utils import shifted_geometric_mean
 
 
 class SolverEvaluationResults:
-    def __init__(self, raw_data: np.array, solvers: [str], metrics: [str]):
+    def __init__(self, raw_data: np.ndarray, solvers: List[str], metrics: List[str]):
         self.data = raw_data
         self.solvers = solvers
         self.metrics = metrics
@@ -18,18 +20,21 @@ class SolverEvaluationResults:
         """Returns a dictionary mapping metric names to their indices"""
         return {metric: idx for idx, metric in enumerate(self.metrics)}
 
-    def get_metric_data(self, metric: str) -> np.array:
-        """Get all data for a specific metric"""
-        return self.data[:, :, self.metric_index[metric]]
+    def get_metric_data(self, metric: str, std=False) -> np.ndarray:
+        """Get all data for a specific metric. Average over all the seeds (or std if std=True)"""
+        data = self.data[:, :, :, self.metric_index[metric]]
+        f = np.std if std else np.mean
+        return f(data, axis=2)
 
-    def aggregate(self, metric: str, aggregation_func: callable) -> np.array:
+    def aggregate(self, metric: str, aggregation_func: callable, std=False) -> np.ndarray:
         """
         Apply aggregation function to a specific metric
         Args:
             metric: metric name to aggregate
             aggregation_func: function to apply (e.g., np.sum, np.mean)
+            std: If True the aggregation is done on the std over the seeds. Else over the mean.
         """
-        return np.array([aggregation_func(self.get_metric_data(metric)[:, i]) for i in range(len(self.solvers))])
+        return np.array([aggregation_func(self.get_metric_data(metric, std)[:, i]) for i in range(len(self.solvers))])
 
     def split_instances_over(self, metric: str, condition):
         assert metric in self.metrics, "Cannot make a split on a non-existing metric"
@@ -56,10 +61,9 @@ class SolverEvaluationResults:
             backend = matplotlib.get_backend()
             matplotlib.use('pgf')
 
-        metric_index = self.metrics.index(metric)
         n_instances = self.data.shape[0]
 
-        data = self.data[:, :, metric_index]
+        data = self.get_metric_data(metric)
         min = np.min(data)
         max = np.max(data)
 
@@ -119,9 +123,10 @@ class SolverEvaluationResults:
         return SolverEvaluationResults(data, solvers, self.metrics)
 
     @staticmethod
-    def sg_metric(metric, s):
-        return (metric, lambda evaluationResults:
-        evaluationResults.aggregate(metric, lambda values: shifted_geometric_mean(values, shift=s))
+    def sg_metric(metric, s, std=False):
+        name = metric if not std else f"{metric} std"
+        return (name, lambda evaluationResults:
+        evaluationResults.aggregate(metric, lambda values: shifted_geometric_mean(values, shift=s), std)
                 )
 
     @staticmethod
@@ -143,9 +148,12 @@ class SolverEvaluationResults:
 
     @staticmethod
     def nsolved():
-        return ("nsolved", lambda evaluationResults: evaluationResults.aggregate("gap", lambda values: values.shape[
-                                                                                                           0] - np.count_nonzero(
-            values)))
+        return ("nsolved",
+                lambda evaluationResults: evaluationResults.aggregate(
+                    "gap",
+                    lambda values: values.shape[0] - np.count_nonzero(values)
+                )
+            )
 
     @staticmethod
     def auc_score(metric, **kwargs):

@@ -1,7 +1,6 @@
-import multiprocessing
+import multiprocessing as mp
 import os
 import resource
-import signal
 import tempfile
 import threading
 import time
@@ -9,8 +8,6 @@ import warnings
 from typing import Any, List, Callable
 
 import numpy as np
-import multiprocessing as mp
-
 import psutil
 
 from boundml.core.utils import shifted_geometric_mean
@@ -20,10 +17,11 @@ from boundml.solvers import Solver
 
 
 class TaskGenerator:
-    def __init__(self, solvers, instances, n_instances, metrics, files, save_instances_names=False, *args):
+    def __init__(self, solvers, instances, n_instances, seeds, metrics, files, save_instances_names=False, *args):
         self.solvers = solvers
         self.instances = instances
         self.n_instances = n_instances
+        self.seeds = seeds
         self.metrics = metrics
         self.files = files
         self.current_instance_path = None
@@ -32,6 +30,7 @@ class TaskGenerator:
 
         self.i = 0
         self.j = 0
+        self.s = 0
         self.args = args
     def __iter__(self):
         return self
@@ -59,10 +58,15 @@ class TaskGenerator:
 
 
         solver = self.solvers[self.j]
+        seed = self.seeds[self.s]
 
-        res = (self.i, self.j, solver, self.current_instance_path, self.metrics, self.current_instance_name, *self.args)
-        self.j += 1
-        if self.j == len(self.solvers):
+        res = (self.i, self.j, self.s, seed, solver, self.current_instance_path, self.metrics, self.current_instance_name, *self.args)
+
+        self.s += 1 # Pass to the next seed
+        if self.s == len(self.seeds): # pass to the next solver
+            self.s = 0
+            self.j += 1
+        if self.j == len(self.solvers): # pass to the next instance
             self.j = 0
             self.i += 1
 
@@ -84,8 +88,9 @@ def _monitor_memory(pid, limit_bytes, stop_event):
             break
         time.sleep(1)
 
-def _solve(solver, prob_file_name, metrics, fail_on_error, fail_on_memory_error):
+def _solve(solver, prob_file_name, metrics, seed, fail_on_error, fail_on_memory_error):
     try:
+        solver.set_seed(seed)
         solver.solve(prob_file_name)
         return [solver[metric] for metric in metrics]
     except MemoryError as e:
@@ -101,7 +106,7 @@ def _solve(solver, prob_file_name, metrics, fail_on_error, fail_on_memory_error)
         return [0 for _ in metrics]
 
 def _solve_wrapper(args):
-    i, j, solver, instance_path, metrics, instance_name, fail_on_error, limit_rss_bytes = args
+    i, j, s, seed, solver, instance_path, metrics, instance_name, fail_on_error, limit_rss_bytes = args
 
     stop_event, watcher = None, None
     if limit_rss_bytes is not None:
@@ -110,19 +115,20 @@ def _solve_wrapper(args):
         watcher.start()
 
     try:
-        metrics_values = _solve(solver, instance_path, metrics, fail_on_error, limit_rss_bytes is None)
+        metrics_values = _solve(solver, instance_path, metrics, seed, fail_on_error, limit_rss_bytes is None)
     finally:
         if limit_rss_bytes is not None:
             stop_event.set()
             watcher.join()
 
 
-    return i, j, metrics_values, instance_name
+    return i, j, s, metrics_values, instance_name
 
 
 def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: int, metrics: List[str], n_cpu: int = 0,
-                     display_instance_names: bool = False, fail_one_error: bool = False, limit_gbytes: int | None = None,
-                     callback: Callable[[str, int, int, np.ndarray], None] | None = None) -> SolverEvaluationResults:
+                     seeds: List[int] = (0,), display_instance_names: bool = False, fail_one_error: bool = False,
+                     limit_gbytes: int | None = None,
+                     callback: Callable[[str, int, int, int, np.ndarray], None] | None = None) -> SolverEvaluationResults:
     """
     Evaluate a set of solvers against a set of instances in parallel.
     It prints as soon as possible the results for each solver on each instance.
@@ -138,11 +144,14 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         Number of instances to evaluate
     metrics : List[str]
         List of metrics reported and saved (e.g. "time", "nnodes", "gap", ...). See ScipSolver for more options.
-    n_cpu :
+    n_cpu : int
         Number of processes to use to run the solvers in parallel
         If 0, it uses all the available cores.
         If 1, no multiprocessing is used.
         Default is 0
+    seeds: List[int]
+        List of seeds used to solve an instance. If more than one seed, the instance is solved several time. The metrics
+        are averaged over all the seeds. By default, all instances are solved once with seed 0.
     display_instance_names : bool
         Whether to display instance names or simple numbering. Default is False.
     fail_one_error : bool
@@ -156,10 +165,10 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         /!\\ Unexpected behavior when n_cpu is 1. As no multiprocessing is used, it will change the memory limit
         of the main process.
         Default None.
-    callback: Callable[[str, int, int, np.ndarray], None] | None
+    callback: Callable[[str, int, int, int, np.ndarray], None] | None
         Callback function called after an instance is solved by a solver. Take as argument the instance name,
-        the instance index, the solver index, the ndarray d containing all the results. d[i,j,:] contains all the
-        metrics from the solving of instances i by solver j.
+        the instance index, the solver index, the ndarray d containing all the results. d[i,j,s,:] contains all the
+        metrics from the solving of instances i by solver j with the seed seeds[s].
     Returns
     -------
     Return a SolverEvaluationResults object which can be used to compute a report on the computed data.
@@ -172,9 +181,9 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
     if limit_gbytes is not None:
         limit_rss_bytes = limit_gbytes * (1024**3)
 
-    n_cpu = min(n_cpu, n_instances * len(solvers) + 1)
+    n_cpu = min(n_cpu, n_instances * len(solvers) * len(seeds) + 1)
 
-    data = np.zeros((n_instances, len(solvers), len(metrics)))
+    data = np.zeros((n_instances, len(solvers), len(seeds), len(metrics)))
 
     files = {}
 
@@ -185,6 +194,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         solvers,
         iter(instances),
         n_instances,
+        seeds,
         metrics,
         files,
         display_instance_names,
@@ -192,18 +202,22 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
         limit_rss_bytes
     )
 
-    def _process_result(i, j, line, instance_name):
-        if j == 0:  # new line
+    def _process_result(i, j, s, line, instance_name):
+        if j == 0 and s == 0:  # new line
             print(f"{instance_name:<15}", end="", flush=True)
 
         for k, d in enumerate(line):
-            data[i, j, k] = d
+            data[i, j, s, k] = d
 
-        _print_result(line)
+        if s == len(seeds) - 1:
+
+            l = data[i, j, :, :]
+            l = np.mean(l, axis=0)
+            _print_result(l)
 
         if callback is not None:
-            callback(instance_name, i, j, data)
-        if j == len(solvers) - 1:
+            callback(instance_name, i, j, s, data)
+        if j == len(solvers) - 1 and s == len(seeds) - 1:
             print()
             if i in files:
                 files[i].close()
