@@ -11,6 +11,7 @@ class Solver(ABC):
 
     def __init__(self):
         self.seed = 0
+        self.items_collectors = {}
 
 
     def set_seed(self, seed):
@@ -51,7 +52,16 @@ class Solver(ABC):
         self.solve(prob_file.name)
         prob_file.close()
 
-    @abstractmethod
+    def add_item(self, name: str, callback):
+        """
+        Add a callback to compute a specific metric. Used when accessing solver["metric"]
+        Parameters
+        ----------
+        name : Name of th metric added
+        callback : Function that return the metric value given the Solver
+        """
+        self.items_collectors[name] = callback
+
     def __getitem__(self, item: str) -> float:
         """
         Get an attribute from the solver after a solving process.
@@ -65,7 +75,9 @@ class Solver(ABC):
         -------
         Value of the attribute.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        if item in self.items_collectors:
+            return self.items_collectors[item](self)
+        raise KeyError(item)
 
 class ScipSolver(Solver):
     def __init__(self, scip_params: dict = None, configure: Callable[[Model], None] = None):
@@ -129,7 +141,7 @@ class ScipSolver(Solver):
                 else:
                     return self.model.getTreesizeEstimation()
             case _:
-                raise KeyError
+                return super().__getitem__(item)
 
     def __getstate__(self):
         return self.scip_params, self.configure
