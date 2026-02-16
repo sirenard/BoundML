@@ -174,6 +174,8 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
     Return a SolverEvaluationResults object which can be used to compute a report on the computed data.
     See SolverEvaluationReport for more details
     """
+    names = []
+
     if n_cpu == 0:
         n_cpu = mp.cpu_count()
 
@@ -204,6 +206,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
 
     def _process_result(i, j, s, line, instance_name):
         if j == 0 and s == 0:  # new line
+            names.append(instance_name)
             print(f"{instance_name:<15}", end="", flush=True)
 
         for k, d in enumerate(line):
@@ -233,7 +236,7 @@ def evaluate_solvers(solvers: List[Solver], instances: Instances, n_instances: i
             solve_res = _solve_wrapper(args)
             _process_result(*solve_res)
 
-    res = SolverEvaluationResults(data, [str(s) for s in solvers], metrics)
+    res = SolverEvaluationResults(data, [str(s) for s in solvers], metrics, names if display_instance_names else None)
 
     print("=" * (15 * (len(solvers) * len(metrics) + 1)))
 

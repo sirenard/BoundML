@@ -10,10 +10,11 @@ from boundml.core.utils import shifted_geometric_mean
 
 
 class SolverEvaluationResults:
-    def __init__(self, raw_data: np.ndarray, solvers: List[str], metrics: List[str]):
+    def __init__(self, raw_data: np.ndarray, solvers: List[str], metrics: List[str], names: List[str] | None = None):
         self.data = raw_data
         self.solvers = solvers
         self.metrics = metrics
+        self.names = names
 
     @property
     def metric_index(self) -> dict:
@@ -22,6 +23,10 @@ class SolverEvaluationResults:
 
     def get_metric_data(self, metric: str, std=False, count_zeros=False) -> np.ndarray:
         """Get all data for a specific metric. Average over all the seeds (or std if std=True)"""
+
+        if metric == "names" and self.names:
+            return self.names
+
         data = self.data[:, :, :, self.metric_index[metric]]
         if not count_zeros:
             mask = np.any(data.reshape(data.shape[0], -1) != 0, axis=1)
@@ -32,7 +37,7 @@ class SolverEvaluationResults:
             mean = self.get_metric_data(metric, False, count_zeros)
             data = data / mean * 100
         else:
-            data = np.mean(data, axis=2)
+            data = np.median(data, axis=2)
         return data
 
     def aggregate(self, metric: str, aggregation_func: callable, std=False, count_zeros=False) -> np.ndarray:
@@ -49,16 +54,24 @@ class SolverEvaluationResults:
     def split_instances_over(self, metric: str, condition):
         assert metric in self.metrics, "Cannot make a split on a non-existing metric"
 
-        index = self.metrics.index(metric)
-        d = self.data[:, :, index]  # keep only the compared metrix
+        d = self.get_metric_data(metric, count_zeros=True)
 
         indexes = np.where(np.prod(np.apply_along_axis(condition, 1, d), axis=1))[0]
 
         positives = self.data[indexes,]
         negatives = np.delete(self.data, indexes, axis=0)
-        return SolverEvaluationResults(positives, self.solvers, self.metrics), SolverEvaluationResults(negatives,
-                                                                                                       self.solvers,
-                                                                                                       self.metrics)
+
+        if self.names is not None:
+            names_pos = [self.names[i] for i in indexes]
+            names_neg = [self.names[i] for i in range(len(self.names)) if i not in indexes]
+        else:
+            names_pos = None
+            names_neg = None
+
+        return (
+            SolverEvaluationResults(positives, self.solvers, self.metrics, names_pos),
+            SolverEvaluationResults(negatives, self.solvers, self.metrics, names_neg),
+        )
 
     def remove_solver(self, solver: str):
         index = self.solvers.index(solver)
@@ -130,7 +143,10 @@ class SolverEvaluationResults:
         assert self.data.shape
         solvers = self.solvers + other.solvers
         data = np.hstack((self.data, other.data))
-        return SolverEvaluationResults(data, solvers, self.metrics)
+        names = None
+        if self.names:
+            names = self.names + other.names
+        return SolverEvaluationResults(data, solvers, self.metrics, names)
 
     @staticmethod
     def sg_metric(metric, s, std=False):
@@ -169,6 +185,9 @@ class SolverEvaluationResults:
     @staticmethod
     def auc_score(metric, **kwargs):
         return ("AUC", lambda evaluationResults: evaluationResults.performance_profile(metric, plot=False, **kwargs))
+
+    def get_names(self):
+        return self.names
 
 class SolverEvaluationReport:
     def __init__(self, data=None, header=None, df_=None):
