@@ -61,6 +61,10 @@ class SolverEvaluationResults:
         positives = self.data[indexes,]
         negatives = np.delete(self.data, indexes, axis=0)
 
+        # For compatibility with older results
+        if not hasattr(self, 'names'):
+            self.names = None
+
         if self.names is not None:
             names_pos = [self.names[i] for i in indexes]
             names_neg = [self.names[i] for i in range(len(self.names)) if i not in indexes]
@@ -144,6 +148,11 @@ class SolverEvaluationResults:
         solvers = self.solvers + other.solvers
         data = np.hstack((self.data, other.data))
         names = None
+
+        # For compatibility with older results
+        if not hasattr(self, 'names'):
+            self.names = None
+
         if self.names:
             names = self.names + other.names
         return SolverEvaluationResults(data, solvers, self.metrics, names)
