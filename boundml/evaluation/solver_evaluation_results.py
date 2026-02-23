@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from tabulate import tabulate
 
 from boundml.core.utils import shifted_geometric_mean
+from boundml.evaluation.reporters import TextReporter
 
 
 class SolverEvaluationResults:
@@ -242,6 +243,31 @@ class SolverEvaluationResults:
 
     def get_names(self):
         return self.names
+
+    def __str__(self):
+        reporter = TextReporter()
+        res = ""
+        res += reporter.on_evaluation_start(self.solvers, self.metrics)
+
+        n_instances = self.data.shape[0]
+        n_solvers = len(self.solvers)
+
+        for i in range(n_instances):
+            instance_name = self.names[i] if self.names is not None else str(i)
+            res += reporter.on_instance_start(instance_name)
+            for j in range(n_solvers):
+                line = self.data[i, j, :, :]
+                line = np.mean(line, axis=0)
+                res += reporter.on_solver_finish(line)
+
+            res += reporter.on_instance_end()
+
+        res += reporter.on_evaluation_end(self, self.metrics, self.solvers)
+
+        return res
+
+
+
 
 class SolverEvaluationReport:
     def __init__(self, data=None, header=None, df_=None):
