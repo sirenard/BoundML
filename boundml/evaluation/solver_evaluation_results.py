@@ -142,20 +142,65 @@ class SolverEvaluationResults:
 
         return SolverEvaluationReport(data, **kwargs)
 
-    def __add__(self, other):
-        assert self.metrics == other.metrics, "Metrics must be the same when combining Results of different solvers"
-        assert self.data.shape
-        solvers = self.solvers + other.solvers
-        data = np.hstack((self.data, other.data))
-        names = None
+    def combine_solvers(self, other):
+        """
+        Combine the results of another SolverEvaluationResults.
+        The 2 SolverEvaluationResults (self and other) must have the same metrics and be for the same instances.
+        Parameters
+        ----------
+        other : SolverEvaluationResults
+            The result to combine
+
+        Returns
+        -------
+        The new SolverEvaluationResults object
+        """
+        assert self.metrics == other.metrics, "Both results have different metrics"
+        assert self.data.shape[0] == other.data.shape[0], "Both results have different number of instances"
+        assert self.data.shape[3] == other.data.shape[3], "Both results have different number of seeds repetitions"
 
         # For compatibility with older results
-        if not hasattr(self, 'names'):
-            self.names = None
+        self_names = getattr(self, 'names', None)
+        other_names = getattr(other, 'names', None)
 
-        if self.names:
-            names = self.names + other.names
-        return SolverEvaluationResults(data, solvers, self.metrics, names)
+        assert self_names == other_names, "Both results solved instances have different names"
+
+        solvers = self.solvers + other.solvers
+        data = np.hstack((self.data, other.data))
+
+        return SolverEvaluationResults(data, solvers, self.metrics[:], self_names)
+
+    def combine_instances(self, other):
+        """
+        Combine the results of another SolverEvaluationResults.
+        The 2 SolverEvaluationResults (self and other) must have the same metrics and be for the same solvers.
+        Parameters
+        ----------
+        other : SolverEvaluationResults
+            The result to combine
+
+        Returns
+        -------
+        The new SolverEvaluationResults object
+        """
+        assert self.metrics == other.metrics, "Both results have different metrics"
+        assert self.data.shape[3] == other.data.shape[3], "Both results have different number of seeds repetitions"
+        assert self.solvers == other.solvers, "Both results have different solvers"
+
+        # For compatibility with older results
+        self_names = getattr(self, 'names', None)
+        other_names = getattr(other, 'names', None)
+
+        assert type(self_names) == type(other_names), \
+            "Both results have different names structure. Once has names for the instances, not the other"
+
+        data = np.vstack((self.data, other.data))
+
+        names = None
+        if self.names is not None:
+            names = self_names + other_names
+
+        return SolverEvaluationResults(data, self.solvers[:], self.metrics[:], names)
 
     @staticmethod
     def sg_metric(metric, s, std=False):
