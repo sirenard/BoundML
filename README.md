@@ -210,7 +210,7 @@ Here is a list of features that are not yet part of `boundml` but will be one da
   also have specific `Component` for the different steps of the SCIP solver (node selection, heuristics, ...)
 - Remove all dependencies to `ecole-fork`
 
-Feel free to contribute by creating pull requests with new features/fixes or by creating issues with your requirement
+Feel free to contribute by creating pull requests with new features/fixes or by creating issues with your requirements
 that could improve `boundml`.
 
 # Troubleshooting and issue
