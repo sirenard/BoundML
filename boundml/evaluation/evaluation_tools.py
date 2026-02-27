@@ -87,6 +87,28 @@ class Evaluator:
             reporter: Optional[BaseReporter] = None,
             callback: Callable[[str, int, int, int, np.ndarray], None] | None = None
     ):
+        """
+        Parameters
+        ----------
+        fail_one_error : bool
+            Whether to raise an exception when a solver fails.
+            If True and an error occurs, the resulting metrics are all 0.
+            Default it False.
+        limit_gbytes : int | None
+            Memory limit applied to the children processes in GB. If None, no limit is applied.
+            When specified, if the child reach the memory limit, it catches the exception and cancel the solving process.
+            All the resulting metrics are 0.
+            /!\\ Unexpected behavior when no executor is given to the evaluate method. As no multiprocessing is used,
+             it will change the memory limit of the main process.
+            Default None.
+        reporter: Optional[BaseReporter]
+            BaseReporter used to report the results during the evalution.
+            If None, a simple ComsoleReporter is built. It prints the results of the solvers on stdout
+        callback: Callable[[str, int, int, int, np.ndarray], None] | None
+            Callback function called after an instance is solved by a solver. Take as argument the instance name,
+            the instance index, the solver index, the ndarray d containing all the results. d[i,j,s,:] contains all the
+            metrics from the solving of instances i by solver j with the seed seeds[s].
+        """
         self.metrics = metrics
         self.fail_on_error = fail_on_error
         self.limit_gbytes = limit_gbytes
@@ -175,6 +197,11 @@ class Evaluator:
             Compatible with ProcessPoolExecutor, ThreadPoolExecutor, or MPIPoolExecutor.
         display_instance_names : bool
             Whether to record and display instance names. Default is False.
+
+        Returns
+        -------
+        Return a SolverEvaluationResults object which can be used to compute a report on the computed data.
+        See SolverEvaluationReport for more details
         """
         names = []
         limit_rss_bytes = self.limit_gbytes * (1024 ** 3) if self.limit_gbytes is not None else None
@@ -239,55 +266,3 @@ class Evaluator:
         self.reporter.on_evaluation_end(res, self.metrics, [str(s) for s in solvers])
 
         return res
-
-
-
-"""
-Evaluate a set of solvers against a set of instances in parallel.
-It prints as soon as possible the results for each solver on each instance.
-
-Parameters
-----------
-solvers : List[Solver]
-    List of solvers that will solve each instance
-instances : Instances
-    Instances generator used to generate all the instances. It can be a list. It must yield either pyscipopt Model
-    or a str that is a path to a problem file
-n_instances : int
-    Number of instances to evaluate
-metrics : List[str]
-    List of metrics reported and saved (e.g. "time", "nnodes", "gap", ...). See ScipSolver for more options.
-n_cpu : int
-    Number of processes to use to run the solvers in parallel
-    If 0, it uses all the available cores.
-    If 1, no multiprocessing is used.
-    Default is 0
-seeds: List[int]
-    List of seeds used to solve an instance. If more than one seed, the instance is solved several time. The metrics
-    are averaged over all the seeds. By default, all instances are solved once with seed 0.
-display_instance_names : bool
-    Whether to display instance names or simple numbering. Default is False.
-fail_one_error : bool
-    Whether to raise an exception when a solver fails.
-    If True and an error occurs, the resulting metrics are all 0.
-    Default it False.
-limit_gbytes : int | None
-    Memory limit applied to the children processes in GB. If None, no limit is applied.
-    When specified, if the child reach the memory limit, it catches the exception and cancel the solving process.
-    All the resulting metrics are 0.
-    /!\\ Unexpected behavior when n_cpu is 1. As no multiprocessing is used, it will change the memory limit
-    of the main process.
-    Default None.
-callback: Callable[[str, int, int, int, np.ndarray], None] | None
-    Callback function called after an instance is solved by a solver. Take as argument the instance name,
-    the instance index, the solver index, the ndarray d containing all the results. d[i,j,s,:] contains all the
-    metrics from the solving of instances i by solver j with the seed seeds[s].
-Returns
--------
-Return a SolverEvaluationResults object which can be used to compute a report on the computed data.
-See SolverEvaluationReport for more details
-"""
-
-
-if __name__ == "__main__":
-    pass

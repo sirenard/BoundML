@@ -1,4 +1,4 @@
-from boundml.evaluation import evaluate_solvers
+from boundml.evaluation import Evaluator
 from boundml.instances import MipLibInstances
 from boundml.solvers import DefaultScipSolver
 
@@ -12,5 +12,7 @@ solvers = [
     DefaultScipSolver("pscost", scip_params),
 ]
 
+evaluator = Evaluator(["nnodes", "time", "gap"])
+
 # Solve the ten first instances
-evaluate_solvers(solvers, instances, 10, ["nnodes", "time", "gap"])
+evaluator.evaluate(solvers, instances, 10) # No executor is given, so run the solvers sequentially

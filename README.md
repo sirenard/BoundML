@@ -100,34 +100,44 @@ over all the seeds is computed. It is possible to compute the average std over t
 The full example is available [here](example/branching_strategy.py).
 
 ```python
-from boundml.evaluation import evaluate_solvers, SolverEvaluationResults
+import concurrent
+
+import pyscipopt
+from pyscipopt import Model
+
+from boundml.components import ScoringBranchingStrategy
+from boundml.evaluation import SolverEvaluationResults, Evaluator
 from boundml.solvers import DefaultScipSolver, ModularSolver
 from boundml.instances import CombinatorialAuctionGenerator
 
 scip_params = {
-    "limits/time": 30
-}
+        "limits/time": 30
+    }
 
-# List of solvers to evaluate
-solvers = [
-    DefaultScipSolver("relpscost", scip_params=scip_params),
-    DefaultScipSolver("pscost", scip_params=scip_params),
-    ModularSolver(MyBranchingStrategy(), scip_params=scip_params),
-]
+    # List of solvers to evaluate
+    solvers= [
+        DefaultScipSolver("relpscost", scip_params=scip_params),
+        DefaultScipSolver("pscost", scip_params=scip_params),
+        ModularSolver(MyBranchingStrategy(), scip_params=scip_params),
+    ]
 
-# Generator of instances on which to perform the evaluation
+    # Generator of instances on which to perform the evaluation
     instances = CombinatorialAuctionGenerator(100, 500)
+    instances.seed(0)
 
     # Evaluate the solvers
-    # data is a SolverEvaluationResults. It can be pickled to be saved and analyzed latter
-    data = evaluate_solvers(
-        solvers,
-        instances,
-        2, # number of instances to solve
-        ["nnodes", "time", "gap"], # list of metrics of interes among ["nnodes", "time", "gap"]
-        0, # Number of cores to use in parallel. If 0, use all the available cores
-        seeds=[0, 1, 3], # Each configuration is run once with each seed
-    )
+    evaluator = Evaluator(["nnodes", "time", "gap"])
+
+    # Use multiprocessing to run several solvers in parallel
+    with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+        # data is a SolverEvaluationResults. It can be pickled to be saved and analyzed latter
+        data = evaluator.evaluate(
+            solvers,
+            instances,
+            10, # number of instances to solve
+            seeds=[0, 1, 3], # Each configuration is run once with each seed
+            executor=executor, # If no executor is given, all the evaluations are done sequentially
+        )
 
     # Compute a report from the raw data.
     # The report aggregates different metrics for each solver.
@@ -135,6 +145,8 @@ solvers = [
         SolverEvaluationResults.sg_metric("nnodes", 10), # SG mean of the number of nodes
         SolverEvaluationResults.sg_metric("time", 1), # SG mean of the time spent
         SolverEvaluationResults.sg_metric("time", 1, std=True), # SG mean of the std overall instances w.r.t time
+        SolverEvaluationResults.sg_metric("gap", 1), # SG mean of the gap of instances where at least one solver has not reached optimallity
+        SolverEvaluationResults.nwins("time"), # Number of time a solver has been the fastest
         SolverEvaluationResults.nwins("nnodes"), # Number of time a solver has been the fastest
         SolverEvaluationResults.nsolved(), # Number of time a solver solved an instance to optimality
         SolverEvaluationResults.auc_score("time"), # AUC score with respect to time
@@ -169,7 +181,7 @@ The following example solves the first 10 instances from [MIPLIB benchmark](http
 with 2 `DefaultScipSolvers` that uses different branching strategies.
 
 ```python
-from boundml.evaluation import evaluate_solvers
+from boundml.evaluation import Evaluator
 from boundml.instances import MipLibInstances
 from boundml.solvers import DefaultScipSolver
 
@@ -183,8 +195,10 @@ solvers = [
     DefaultScipSolver("pscost", scip_params),
 ]
 
+evaluator = Evaluator(["nnodes", "time", "gap"])
+
 # Solve the ten first instances
-evaluate_solvers(solvers, instances, 10, ["nnodes", "time", "gap"])
+evaluator.evaluate(solvers, instances, 10) # No executor is given, so run the solvers sequentially
 ```
 
 # Limitations and future development
@@ -196,7 +210,7 @@ Here is a list of features that are not yet part of `boundml` but will be one da
   also have specific `Component` for the different steps of the SCIP solver (node selection, heuristics, ...)
 - Remove all dependencies to `ecole-fork`
 
-Feel free to contribute by creating pool requests with new features/fixes or by creating issues with your requirement
+Feel free to contribute by creating pull requests with new features/fixes or by creating issues with your requirement
 that could improve `boundml`.
 
 # Troubleshooting and issue

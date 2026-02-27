@@ -4,13 +4,15 @@ Example of pipeline of the BoundML library
 It replicates the experiment of "Exact Combinatorial Optimization  with Graph Convolutional Neural Networks"
 (http://arxiv.org/abs/1906.01629)
 """
+import concurrent
+
 import ecole
 import torch
 
 import boundml.instances
 from boundml.components import StrongBranching, Pseudocosts, EcoleComponent
 from boundml.components.gnn_component import GnnBranching
-from boundml.evaluation import evaluate_solvers, SolverEvaluationResults
+from boundml.evaluation import Evaluator, SolverEvaluationResults
 from boundml.ml import train, BranchingDatasetGenerator
 from boundml.solvers import ModularSolver, DefaultScipSolver
 
@@ -57,8 +59,10 @@ solvers = [
 
 metrics = ["nnodes", "time", "gap"] # metrics of interest
 
+evaluator = Evaluator(metrics)
 
-evaluation_results = evaluate_solvers(solvers, instances, n_instances, metrics, 0)
+with concurrent.futures.ProcessPoolExecutor() as executor:
+    evaluation_results = evaluator.evaluate(solvers, instances, n_instances, executor=executor)
 
 report = evaluation_results.compute_report(
         SolverEvaluationResults.sg_metric("nnodes", 10),
