@@ -1,6 +1,6 @@
 import tempfile
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 
 from pyscipopt import Model
 
@@ -154,13 +154,14 @@ class DefaultScipSolver(ScipSolver):
     Default scip solver.
     Solve the instances based on the given scip parameters.
     """
-    def __init__(self, branching_strategy, *args, **kwargs):
+    def __init__(self, branching_strategy: Optional[str] = None, *args, **kwargs):
         """
         Parameters
         ----------
-        branching_strategy : str
+        branching_strategy : Optional[str]
             Branching strategy to use. Must be a default SCIP strategy, or a strategy included in the Model using
-            the configure callback
+            the configure callback.
+            If None (default). It will use the default strategy of SCIP as set in the parameters.
         args :
             Arguments to build the parent class ScipSolver
         kwargs :
@@ -171,7 +172,8 @@ class DefaultScipSolver(ScipSolver):
 
     def build_model(self):
         super().build_model()
-        self.model.setParam(f"branching/{self.branching_strategy}/priority", 9999999)
+        if self.branching_strategy is not None:
+            self.model.setParam(f"branching/{self.branching_strategy}/priority", 9999999)
 
 
     def solve(self, instance: str):
