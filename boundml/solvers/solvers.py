@@ -144,10 +144,10 @@ class ScipSolver(Solver):
                 return super().__getitem__(item)
 
     def __getstate__(self):
-        return self.scip_params, self.configure
+        state = self.__dict__.copy()
+        state['model'] = None
 
-    def __setstate__(self, state):
-        self.__init__(*state)
+        return state
 
 class DefaultScipSolver(ScipSolver):
     """
@@ -168,10 +168,6 @@ class DefaultScipSolver(ScipSolver):
         """
         super().__init__(*args, **kwargs)
         self.branching_strategy = branching_strategy
-        self.state = (
-            [branching_strategy, *args],
-            kwargs
-        )
 
     def build_model(self):
         super().build_model()
@@ -182,12 +178,6 @@ class DefaultScipSolver(ScipSolver):
         self.build_model()
         self.model.readProblem(instance)
         self.model.optimize()
-
-    def __getstate__(self):
-        return self.state
-
-    def __setstate__(self, state):
-        self.__init__(*state[0], **state[1])
 
     def __str__(self):
         return self.branching_strategy
