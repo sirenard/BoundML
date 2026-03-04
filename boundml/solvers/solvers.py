@@ -96,11 +96,13 @@ class ScipSolver(Solver):
 
     def build_model(self):
         self.model = Model()
+        self.model.hideOutput()
         self.model.setParams(self.scip_params)
         if self.configure is not None:
             self.configure(self.model)
-        self.model.setParam("display/verblevel", 0)
         self.model.setParam("randomization/randomseedshift", self.seed)
+        self.model.setParam("randomization/permutationseed", self.seed)
+        self.model.setParam("randomization/lpseed", self.seed)
 
     def set_params(self, params):
         self.scip_params = params
