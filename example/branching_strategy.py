@@ -72,7 +72,7 @@ if __name__ == "__main__":
         SolverEvaluationResults.sg_metric("nnodes", 10), # SG mean of the number of nodes
         SolverEvaluationResults.sg_metric("time", 1), # SG mean of the time spent
         SolverEvaluationResults.sg_metric("time", 1, std=True), # SG mean of the std overall instances w.r.t time
-        SolverEvaluationResults.sg_metric("gap", 1), # SG mean of the gap of instances where at least one solver has not reached optimallity
+        SolverEvaluationResults.sg_metric("gap", 1), # SG mean of the gap of instances where at least one solver has not reached optimality
         SolverEvaluationResults.nwins("time"), # Number of time a solver has been the fastest
         SolverEvaluationResults.nwins("nnodes"), # Number of time a solver has been the fastest
         SolverEvaluationResults.nsolved(), # Number of time a solver solved an instance to optimality

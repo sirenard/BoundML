@@ -61,12 +61,6 @@ class ModularSolver(ScipSolver):
 
         self.components.done(self.model)
 
-    def __getstate__(self):
-        return (self.components, self.scip_params, self.configure)
-
-    def __setstate__(self, state):
-        self.__init__(*state[0], scip_params=state[1], configure=state[2])
-
     def __str__(self):
         return "+".join([str(c) for c in self.components])
 

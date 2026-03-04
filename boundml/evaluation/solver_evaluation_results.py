@@ -52,12 +52,37 @@ class SolverEvaluationResults:
         res = np.array([aggregation_func(self.get_metric_data(metric, std, count_zeros)[:, i]) for i in range(len(self.solvers))])
         return np.nan_to_num(res)
 
-    def split_instances_over(self, metric: str, condition):
+    def split_instances_over(self, metric: str, condition, require_all: bool = True):
+        """
+        Splits instances into positives and negatives based on a condition.
+
+        Parameters
+        ----------
+        metric : str
+            The metric to evaluate the condition against.
+        condition : callable
+            A function that returns a boolean array when applied to the metric data.
+        require_all : bool, default True
+            If True, ALL solvers must meet the condition for an instance to be positive.
+            If False, AT LEAST ONE solver must meet the condition for an instance to be positive.
+
+        Returns
+        -------
+        tuple
+            Two SolverEvaluationResults objects: (positives, negatives)
+        """
         assert metric in self.metrics, "Cannot make a split on a non-existing metric"
 
         d = self.get_metric_data(metric, count_zeros=True)
 
-        indexes = np.where(np.prod(np.apply_along_axis(condition, 1, d), axis=1))[0]
+        # Apply the condition to the data
+        condition_met = np.apply_along_axis(condition, 1, d)
+
+        # Filter based on the require_all flag
+        if require_all:
+            indexes = np.where(np.all(condition_met, axis=1))[0]
+        else:
+            indexes = np.where(np.any(condition_met, axis=1))[0]
 
         positives = self.data[indexes,]
         negatives = np.delete(self.data, indexes, axis=0)

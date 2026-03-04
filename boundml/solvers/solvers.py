@@ -1,6 +1,6 @@
 import tempfile
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 
 from pyscipopt import Model
 
@@ -96,11 +96,13 @@ class ScipSolver(Solver):
 
     def build_model(self):
         self.model = Model()
+        self.model.hideOutput()
         self.model.setParams(self.scip_params)
         if self.configure is not None:
             self.configure(self.model)
-        self.model.setParam("display/verblevel", 0)
         self.model.setParam("randomization/randomseedshift", self.seed)
+        self.model.setParam("randomization/permutationseed", self.seed)
+        self.model.setParam("randomization/lpseed", self.seed)
 
     def set_params(self, params):
         self.scip_params = params
@@ -144,23 +146,24 @@ class ScipSolver(Solver):
                 return super().__getitem__(item)
 
     def __getstate__(self):
-        return self.scip_params, self.configure
+        state = self.__dict__.copy()
+        state['model'] = None
 
-    def __setstate__(self, state):
-        self.__init__(*state)
+        return state
 
 class DefaultScipSolver(ScipSolver):
     """
     Default scip solver.
     Solve the instances based on the given scip parameters.
     """
-    def __init__(self, branching_strategy, *args, **kwargs):
+    def __init__(self, branching_strategy: Optional[str] = None, *args, **kwargs):
         """
         Parameters
         ----------
-        branching_strategy : str
+        branching_strategy : Optional[str]
             Branching strategy to use. Must be a default SCIP strategy, or a strategy included in the Model using
-            the configure callback
+            the configure callback.
+            If None (default). It will use the default strategy of SCIP as set in the parameters.
         args :
             Arguments to build the parent class ScipSolver
         kwargs :
@@ -168,26 +171,17 @@ class DefaultScipSolver(ScipSolver):
         """
         super().__init__(*args, **kwargs)
         self.branching_strategy = branching_strategy
-        self.state = (
-            [branching_strategy, *args],
-            kwargs
-        )
 
     def build_model(self):
         super().build_model()
-        self.model.setParam(f"branching/{self.branching_strategy}/priority", 9999999)
+        if self.branching_strategy is not None:
+            self.model.setParam(f"branching/{self.branching_strategy}/priority", 9999999)
 
 
     def solve(self, instance: str):
         self.build_model()
         self.model.readProblem(instance)
         self.model.optimize()
-
-    def __getstate__(self):
-        return self.state
-
-    def __setstate__(self, state):
-        self.__init__(*state[0], **state[1])
 
     def __str__(self):
         return self.branching_strategy
