@@ -82,29 +82,11 @@ class MipLibInstances(FolderInstances):
             with zipfile.ZipFile(self._zip_file, 'r') as zip_ref:
                 zip_ref.extractall(self._instances_dir)
 
-            files = os.listdir(self._instances_dir)
-            with tqdm(
-                    desc=str("Extracting instances"),
-                    total=len(files),
-                    unit='it',
-                    unit_scale=True,
-                    unit_divisor=1,
-            ) as bar:
-                for file in files:
-                    path = os.path.join(self._instances_dir, file)
-                    dest_path = ".".join(path.split(".")[:-1])
-                    with gzip.open(path, 'rb') as f_in:
-                        with open(dest_path, 'wb') as f_out:
-                            shutil.copyfileobj(f_in, f_out)
-                    os.remove(path)
-
-                    bar.update(1)
-
 
 if __name__ == "__main__":
     instances = MipLibInstances("benchmark", filter=lambda name: "30n20b8" in name)
     instances.seed(1)
 
     solver = DefaultScipSolver("relpscost", {"limits/time": 60})
-    solver.solve_model(next(instances))
+    solver.solve(next(instances))
     print(solver["nnodes"], solver["time"], solver["gap"])
