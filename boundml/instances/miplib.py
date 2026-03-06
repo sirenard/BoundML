@@ -1,5 +1,3 @@
-import gzip
-import os
 import shutil
 import zipfile
 from pathlib import Path
@@ -84,7 +82,7 @@ class MipLibInstances(FolderInstances):
 
 
 if __name__ == "__main__":
-    instances = MipLibInstances("benchmark", filter=lambda name: "30n20b8" in name)
+    instances = MipLibInstances("collection", filter=lambda name: "30n20b8" in name)
     instances.seed(1)
 
     solver = DefaultScipSolver("relpscost", {"limits/time": 60})
