@@ -22,13 +22,14 @@ class SolverEvaluationResults:
         """Returns a dictionary mapping metric names to their indices"""
         return {metric: idx for idx, metric in enumerate(self.metrics)}
 
-    def get_metric_data(self, metric: str, std=False, count_zeros=False) -> np.ndarray:
+    def get_metric_data(self, metric: str, std=False, count_zeros=False, min_val = -float("inf"), max_val = float("inf")) -> np.ndarray:
         """Get all data for a specific metric. Average over all the seeds (or std if std=True)"""
 
         if metric == "names" and self.names:
             return self.names
 
         data = self.data[:, :, :, self.metric_index[metric]]
+        data = np.clip(data, min_val, max_val)
         if not count_zeros:
             mask = np.any(data.reshape(data.shape[0], -1) != 0, axis=1)
             data = data[mask]
@@ -41,7 +42,7 @@ class SolverEvaluationResults:
             data = np.median(data, axis=2)
         return data
 
-    def aggregate(self, metric: str, aggregation_func: callable, std=False, count_zeros=False) -> np.ndarray:
+    def aggregate(self, metric: str, aggregation_func: callable, std=False, count_zeros=False, min_val = -float("inf"), max_val = float("inf")) -> np.ndarray:
         """
         Apply aggregation function to a specific metric
         Args:
@@ -49,7 +50,7 @@ class SolverEvaluationResults:
             aggregation_func: function to apply (e.g., np.sum, np.mean)
             std: If True the aggregation is done on the std over the seeds. Else over the mean.
         """
-        res = np.array([aggregation_func(self.get_metric_data(metric, std, count_zeros)[:, i]) for i in range(len(self.solvers))])
+        res = np.array([aggregation_func(self.get_metric_data(metric, std, count_zeros, min_val, max_val)[:, i]) for i in range(len(self.solvers))])
         return np.nan_to_num(res)
 
     def split_instances_over(self, metric: str, condition, require_all: bool = True):
@@ -107,6 +108,11 @@ class SolverEvaluationResults:
         index = self.solvers.index(solver)
         self.data = np.delete(self.data, index, axis=1)
         self.solvers.remove(solver)
+
+    def remove_metric(self, metric: str):
+        index = self.metric_index[metric]
+        self.data = np.delete(self.data, index, axis=3)
+        self.metrics.pop(index)
 
     def performance_profile(self, metric: str = "nnodes", ratios=np.arange(0, 1.00, .01), filename=None, plot=True, logx=True):
 
@@ -229,10 +235,10 @@ class SolverEvaluationResults:
         return SolverEvaluationResults(data, self.solvers[:], self.metrics[:], names)
 
     @staticmethod
-    def sg_metric(metric, s, std=False):
+    def sg_metric(metric, s, std=False, min_val = -float("inf"), max_val = float("inf")):
         name = metric if not std else f"{metric} std (%)"
         return (name, lambda evaluationResults:
-        evaluationResults.aggregate(metric, lambda values: shifted_geometric_mean(values, shift=s), std, count_zeros=False)
+        evaluationResults.aggregate(metric, lambda values: shifted_geometric_mean(values, shift=s), std, count_zeros=False, min_val=min_val, max_val=max_val)
                 )
 
     @staticmethod
