@@ -1,10 +1,10 @@
 import concurrent.futures
 import os
-import resource
+import signal
 import tempfile
-import threading
 import time
 import warnings
+import multiprocessing
 from typing import List, Callable, Optional
 
 import numpy as np
@@ -98,8 +98,6 @@ class Evaluator:
             Memory limit applied to the children processes in GB. If None, no limit is applied.
             When specified, if the child reach the memory limit, it catches the exception and cancel the solving process.
             All the resulting metrics are 0.
-            /!\\ Unexpected behavior when no executor is given to the evaluate method. As no multiprocessing is used,
-             it will change the memory limit of the main process.
             Default None.
         reporter: Optional[BaseReporter]
             BaseReporter used to report the results during the evalution.
@@ -117,34 +115,27 @@ class Evaluator:
 
     @staticmethod
     def _monitor_memory(pid, limit_bytes, stop_event):
-        process = psutil.Process(pid)
+        try:
+            process = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            return
         while not stop_event.is_set():
             try:
                 # Check strictly PHYSICAL memory (RSS)
                 rss = process.memory_info().rss
                 if rss > limit_bytes:
-                    warnings.warn(
-                        f"[{pid}] KILLED: Used {rss / 1024 ** 3:.2f} GB > Limit {limit_bytes / 1024 ** 3:.2f} GB")
-
-                    # Setting the RLIMIT_AS now will force the underlying solver to crash.
-                    resource.setrlimit(resource.RLIMIT_AS, (limit_bytes, limit_bytes))
+                    os.kill(pid, signal.SIGKILL)
                     break
             except psutil.NoSuchProcess:
                 break
             time.sleep(1)
 
     @staticmethod
-    def _solve(solver, prob_file_name, metrics, seed, fail_on_error, fail_on_memory_error):
+    def _solve(solver, prob_file_name, metrics, seed, fail_on_error):
         try:
             solver.set_seed(seed)
             solver.solve(prob_file_name)
             return [solver[metric] for metric in metrics]
-        except MemoryError as e:
-            print(fail_on_memory_error)
-            if fail_on_memory_error:
-                raise e
-            warnings.warn(f"Memory usage reached while solvign {prob_file_name} with {solver}")
-            return [0 for _ in metrics]
         except Exception as e:
             if fail_on_error:
                 raise e
@@ -155,18 +146,54 @@ class Evaluator:
     def _solve_wrapper(args):
         i, j, s, seed, solver, instance_path, metrics, instance_name, fail_on_error, limit_rss_bytes = args
 
-        stop_event, watcher = None, None
+        # We create a Queue to get the results back from the isolated solver process
+        result_queue = multiprocessing.Queue()
+
+        def isolated_solve():
+            try:
+                res = Evaluator._solve(solver, instance_path, metrics, seed, fail_on_error)
+                result_queue.put(res)
+            except Exception as e:
+                result_queue.put(e)
+
+        # Start the solver in its own process
+        worker = multiprocessing.Process(target=isolated_solve)
+        worker.start()
+        worker_pid = worker.pid
+
+        # Start the monitor to watch the worker
+        stop_event = multiprocessing.Event()
+        watcher = None
         if limit_rss_bytes is not None:
-            stop_event = threading.Event()
-            watcher = threading.Thread(target=Evaluator._monitor_memory, args=(os.getpid(), limit_rss_bytes, stop_event))
+            watcher = multiprocessing.Process(
+                target=Evaluator._monitor_memory,
+                args=(worker_pid, limit_rss_bytes, stop_event),
+                daemon=True
+            )
             watcher.start()
 
-        try:
-            metrics_values = Evaluator._solve(solver, instance_path, metrics, seed, fail_on_error, limit_rss_bytes is None)
-        finally:
-            if limit_rss_bytes is not None:
-                stop_event.set()
-                watcher.join()
+        worker.join()  # Wait for solver to finish OR be killed by monitor
+        stop_event.set()  # Stop the monitor if it's still running
+
+        # Check why the worker stopped
+        if worker.exitcode == -signal.SIGKILL:
+            warnings.warn(
+                f"Instance {instance_name} killed: Memory limit {limit_rss_bytes / 1024 ** 3:.2f} GB exceeded.")
+            metrics_values = [0 for _ in metrics]
+        elif worker.exitcode != 0 and not fail_on_error:
+            warnings.warn(f"Instance {instance_name} failed with exit code {worker.exitcode}")
+            metrics_values = [0 for _ in metrics]
+        else:
+            # Success: Get the result from the queue
+            try:
+                metrics_values = result_queue.get(timeout=2)
+                if isinstance(metrics_values, Exception):
+                    raise metrics_values
+            except:
+                metrics_values = [0 for _ in metrics]
+
+        if watcher and watcher.is_alive():
+            watcher.terminate()
 
         return i, j, s, metrics_values, instance_name
 
