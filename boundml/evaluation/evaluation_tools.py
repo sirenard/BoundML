@@ -180,17 +180,15 @@ class Evaluator:
             warnings.warn(
                 f"Instance {instance_name} killed: Memory limit {limit_rss_bytes / 1024 ** 3:.2f} GB exceeded.")
             metrics_values = [0 for _ in metrics]
-        elif worker.exitcode != 0 and not fail_on_error:
-            warnings.warn(f"Instance {instance_name} failed with exit code {worker.exitcode}")
-            metrics_values = [0 for _ in metrics]
         else:
             # Success: Get the result from the queue
-            try:
-                metrics_values = result_queue.get(timeout=2)
-                if isinstance(metrics_values, Exception):
+            metrics_values = result_queue.get(timeout=2)
+            if isinstance(metrics_values, Exception):
+                if fail_on_error:
                     raise metrics_values
-            except:
-                metrics_values = [0 for _ in metrics]
+                else:
+                    warnings.warn(metrics_values)
+                    metrics_values = [0 for _ in metrics]
 
         if watcher and watcher.is_alive():
             watcher.terminate()
