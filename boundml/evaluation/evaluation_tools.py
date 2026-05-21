@@ -90,15 +90,20 @@ class Evaluator:
         """
         Parameters
         ----------
-        fail_one_error : bool
+        fail_on_error : bool
             Whether to raise an exception when a solver fails.
-            If True and an error occurs, the resulting metrics are all 0.
-            Default it False.
+            If False and an error occurs, the resulting metrics are all 0.
+            Default is True.
         limit_gbytes : int | None
-            Memory limit applied to the children processes in GB. If None, no limit is applied.
-            When specified, if the child reach the memory limit, it catches the exception and cancel the solving process.
-            All the resulting metrics are 0.
-            Default None.
+            Memory limit applied to the child processes in GB. If None, no limit is applied.
+            When specified, if the child reaches the memory limit, it cancels the solving process
+            and all the resulting metrics are 0.
+            Default is None.
+            
+            WARNING: If `limit_gbytes` is set or `fail_on_error` is False, the evaluation will 
+            be executed in a separate child process. Any state modifications made to objects (such 
+            as the solver) will only occur in the child process and will not persist in the main 
+            process for subsequent instances.
         reporter: Optional[BaseReporter]
             BaseReporter used to report the results during the evalution.
             If None, a simple ComsoleReporter is built. It prints the results of the solvers on stdout
@@ -145,6 +150,10 @@ class Evaluator:
     @staticmethod
     def _solve_wrapper(args):
         i, j, s, seed, solver, instance_path, metrics, instance_name, fail_on_error, limit_rss_bytes = args
+
+        if limit_rss_bytes is None and fail_on_error:
+            metrics_values = Evaluator._solve(solver, instance_path, metrics, seed, fail_on_error)
+            return i, j, s, metrics_values, instance_name
 
         # We create a Queue to get the results back from the isolated solver process
         result_queue = multiprocessing.Queue()
