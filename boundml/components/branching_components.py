@@ -88,7 +88,7 @@ class ScoringBranchingStrategy(BranchingComponent):
 
         if passive:
             return SCIP_RESULT.DIDNOTRUN
-        elif np.nan in self.scores:
+        elif np.any(np.isnan(self.scores)):
             return SCIP_RESULT.CUTOFF
         else:
             index = np.argmax(self.scores)
