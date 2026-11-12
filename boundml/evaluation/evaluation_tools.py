@@ -45,7 +45,7 @@ class TaskGenerator:
                 self.current_instance_path = instance
                 name = instance.split("/")[-1].split(".")[0]  # get the instance name
             else:
-                prob_file = tempfile.NamedTemporaryFile(suffix=".mps")
+                prob_file = tempfile.NamedTemporaryFile(suffix=".cip")
                 instance.writeProblem(prob_file.name, verbose=False)
                 self.current_instance_path = prob_file.name
                 name = instance.getProbName()
